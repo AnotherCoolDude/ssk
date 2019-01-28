@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
@@ -54,6 +55,17 @@ func ActiveSheetname(path string) string {
 func Coords(col, row int) string {
 	alpha := excelize.ToAlphaString(col)
 	return fmt.Sprintf("%s%d", alpha, row)
+}
+
+// inserts a insertable struct into a given file. Creates a new file if necessary
+func Add(path string, data insertable) {
+	file, err := excelize.OpenFile(path)
+	if os.IsNotExist(err) {
+		file := os.Create(path)
+	}
+
+	file := open(path)
+
 }
 
 func open(path string) *excelize.File {
