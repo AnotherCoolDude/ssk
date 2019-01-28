@@ -4,27 +4,29 @@ import (
 	"strconv"
 
 	"github.com/fatih/structs"
-
-	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
 const (
 	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rentabilität.xlsx"
 	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/eingangsrechnungen.xlsx"
+	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result.xlsx"
 )
 
 var (
-	rentColumns = []string{"A1", "C1", "G1", "I1", "L1", "E1"}
+	rentColumns = []string{"A", "C", "G", "I", "L", "E"}
+	inputExcel  Excel
+	destExcel   Excel
 )
 
 func main() {
-	PrintHeader(rentabilität, 0)
-	PrintHeader(eingangsrechnungen, 0)
+	destExcel = ExcelFile(resultPath, "result")
+	inputExcel = ExcelFile(rentabilität, "")
+	PrintHeader(&inputExcel, 0)
 
-	data := FilterColumns(rentabilität, ActiveSheetname(rentabilität), rentColumns)
-	projects := []project{}
+	data := FilterColumns(&inputExcel, rentColumns)
+	projects := []Project{}
 	for _, row := range data {
-		projects = append(projects, project{
+		projects = append(projects, Project{
 			customer:                row[0],
 			number:                  row[1],
 			externalCostsChargeable: mustParse(row[2]),
@@ -34,13 +36,15 @@ func main() {
 		})
 	}
 
+	for _, p := range projects {
+		Add(&destExcel, &p)
+	}
+
+	destExcel.Save(resultPath)
 }
 
-type insertable interface {
-	insert(row int, file *excelize.File)
-}
-
-type project struct {
+// Project defines the necessary fields from "rentabilität"
+type Project struct {
 	customer                string
 	number                  string
 	externalCostsChargeable float32
@@ -49,13 +53,20 @@ type project struct {
 	revenue                 float32
 }
 
-func (p *project) insert(row int, file *excelize.File) {
-	names := structs.Names(p)
-	pMap := structs.Map(p)
-	for i, name := range names {
-		file.SetCellValue(ActiveSheetname(file.Path), Coords(i, row), pMap[name])
-	}
+// Columns returns the columnnames from struct Project
+func (p *Project) Columns() []string {
+	return structs.Names(p)
+}
 
+// Insert inserts values from struct Project
+func (p *Project) Insert(excel *Excel) {
+	pMap := structs.Map(p)
+	nextRow := excel.NextRow()
+	for _, n := range structs.Names(p) {
+		coords := excel.CoordsForHeader(n)
+		coords.row = nextRow
+		excel.AddValue(coords, pMap[n])
+	}
 }
 
 func mustParse(s string) float32 {
