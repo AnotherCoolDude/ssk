@@ -8,32 +8,57 @@ import (
 )
 
 const (
-	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rentabilität.xlsx"
-	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/eingangsrechnungen.xlsx"
-	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result.xlsx"
+	rentabilität       = "/Users/empfang/Desktop/fremdkosten/rentabilität.xlsx"
+	eingangsrechnungen = "/Users/empfang/Desktop/fremdkosten/eingangsrechnungen.xlsx"
+	resultPath         = "/Users/empfang/Desktop/fremdkosten/result.xlsx"
 )
 
 var (
 	rentColumns = []string{"A", "C", "G", "I", "L", "E"}
-	inputExcel  Excel
+	erColumns   = []string{"F", "G", "K"}
+	rentExcel   Excel
+	erExcel     Excel
 	destExcel   Excel
 )
 
 func main() {
 	destExcel = ExcelFile(resultPath, "result")
-	inputExcel = ExcelFile(rentabilität, "")
+	rentExcel = ExcelFile(rentabilität, "")
+	erExcel = ExcelFile(eingangsrechnungen, "")
 
-	data := FilterColumns(&inputExcel, rentColumns)
+	rentData := FilterColumns(&rentExcel, rentColumns)
 	projects := []Project{}
-	for _, row := range data {
+	for _, row := range rentData {
 		projects = append(projects, Project{
 			customer:                row[0],
 			number:                  row[1],
 			externalCostsChargeable: mustParse(row[2]),
 			externalCosts:           mustParse(row[3]),
+			invoice:                 []float32{},
+			fibu:                    []string{},
 			income:                  mustParse(row[4]),
 			revenue:                 mustParse(row[5]),
 		})
+	}
+
+	style, err := erExcel.File.NewStyle(`{"number_format":{"type":"General"}}`)
+	if err != nil {
+		fmt.Println(err)
+	}
+	erExcel.File.SetCellStyle(erExcel.ActiveSheetName, "F2", "F2", style)
+	testData := erExcel.File.GetCellValue(erExcel.ActiveSheetName, "F2")
+	fmt.Printf("test data %s\n", testData)
+
+	erData := FilterColumns(&erExcel, erColumns)
+
+	for _, row := range erData {
+
+		for i, p := range projects {
+			if row[1] == p.number {
+				projects[i].fibu = append(projects[i].fibu, row[0])
+				projects[i].invoice = append(projects[i].invoice, mustParse(row[2]))
+			}
+		}
 	}
 
 	for _, p := range projects {
@@ -43,12 +68,14 @@ func main() {
 	destExcel.Save(resultPath)
 }
 
-// Project defines the necessary fields from "rentabilität"
+// Project defines the necessary fields for the result xlsx
 type Project struct {
 	customer                string
 	number                  string
 	externalCostsChargeable float32
 	externalCosts           float32
+	invoice                 []float32
+	fibu                    []string
 	income                  float32
 	revenue                 float32
 }
@@ -63,24 +90,19 @@ func (p *Project) Columns() []string {
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(excel *Excel) {
+	row := excel.NextRow()
 
-	header := structs.Names(p)
-	//fmt.Println(header)
-	excel.AddValue(excel.CoordsForHeader(header[0]), p.customer)
-	excel.AddValue(excel.CoordsForHeader(header[1]), p.number)
-	excel.AddValue(excel.CoordsForHeader(header[2]), p.externalCostsChargeable)
-	excel.AddValue(excel.CoordsForHeader(header[3]), p.externalCosts)
-	excel.AddValue(excel.CoordsForHeader(header[4]), p.income)
-	excel.AddValue(excel.CoordsForHeader(header[5]), p.revenue)
+	excel.AddValue(Coordinates{column: 0, row: row}, p.customer)
+	excel.AddValue(Coordinates{column: 1, row: row}, p.number)
+	excel.AddValue(Coordinates{column: 2, row: row}, p.externalCostsChargeable)
+	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCosts)
+	excel.AddValue(Coordinates{column: 6, row: row}, p.income)
+	excel.AddValue(Coordinates{column: 7, row: row}, p.revenue)
 
-	// pMap := structs.Map(p)
-
-	// for _, n := range structs.Names(p) {
-	// 	coords := excel.CoordsForHeader(n)
-	// 	coords.row = nextRow
-	// 	fmt.Printf("adding %v to coords %s\n", pMap[n], coords.CoordString())
-	// 	excel.AddValue(coords, pMap[n])
-	// }
+	for i, er := range p.fibu {
+		excel.AddValue(Coordinates{column: 4, row: row + i + 1}, p.invoice[i])
+		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, er)
+	}
 }
 
 func mustParse(s string) float32 {

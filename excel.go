@@ -17,78 +17,29 @@ type Excel struct {
 
 // NextRow returns the next free Row
 func (excel *Excel) NextRow() int {
-	rows := excel.File.GetRows(excel.ActiveSheetName)
-	return len(rows)
+	return len(excel.File.GetRows(excel.ActiveSheetName)) + 1
 }
 
 // Save saves the Excelfile to the provided path
 func (excel *Excel) Save(path string) {
-	for _, row := range excel.File.GetRows(excel.ActiveSheetName) {
-		fmt.Printf("saving row: %s\n", row)
-	}
 	excel.File.SaveAs(path)
 }
 
-// CoordsForHeader returns the coords for the next free row and the given header
-func (excel *Excel) CoordsForHeader(header string) Coordinates {
-	rows := excel.File.GetRows(excel.ActiveSheetName)
-	var freeRow int
-	headerColumn := -1
-	for index, row := range rows {
-		//fmt.Println(row)
-		if emptySlice(row) && headerColumn == -1 {
-			fmt.Println("row is empty")
-			continue
+// ColumnForHeader returns the column for the proived header
+func (excel *Excel) ColumnForHeader(header string) string {
+	headerCol := excel.File.GetRows(excel.ActiveSheetName)[0]
+	for i, head := range headerCol {
+		if head == header {
+			return excelize.ToAlphaString(i)
 		}
-		for j, column := range row {
-			if column == header && headerColumn == -1 {
-				headerColumn = j
-				continue
-			}
-		}
-		if headerColumn != -1 {
-			if row[headerColumn] == "" {
-				freeRow = index
-				coords := Coordinates{
-					column: headerColumn,
-					row:    freeRow + 1,
-				}
-				fmt.Printf("next free coords for header %s: %s\n", header, coords.CoordString())
-			}
-		}
-
 	}
-	//fmt.Println("couldn't determine next free Cell")
-	return Coordinates{
-		column: 0,
-		row:    0,
-	}
+	fmt.Printf("couldn't find header %s\n", header)
+	return ""
 }
-
-// CoordsForHeader returns the coords for the next free row and the given header
-// func (excel *Excel) CoordsForHeader(header string) Coordinates {
-// 	rows := excel.File.GetRows(excel.ActiveSheetName)
-// 	for i, column := range rows[0] {
-// 		//fmt.Println(column)
-// 		if column == header {
-// 			freeRowIndex := 1
-// 			for j := range rows {
-// 				if excel.File.GetCellValue(excel.ActiveSheetName, Coordinates{column: i, row: freeRowIndex}.CoordString()) == "" {
-// 					freeRowIndex = freeRowIndex + j
-// 				}
-// 			}
-// 			coords := Coordinates{column: i, row: freeRowIndex}
-// 			fmt.Printf("next free cell for header %s is at %s\n", header, coords.CoordString())
-// 			return coords
-// 		}
-// 	}
-// 	return Coordinates{0, 0}
-// }
 
 // AddValue adds a value to the provided coordinates
 func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
 	excel.File.SetCellValue(excel.ActiveSheetName, coords.CoordString(), value)
-	//fmt.Printf("Cell Value: %s\n", excel.File.GetCellValue(excel.ActiveSheetName, coords.CoordString()))
 }
 
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
@@ -132,7 +83,9 @@ type CoordsTransmutable interface {
 
 // CoordString returns the coordinates as excelformatted string
 func (c Coordinates) CoordString() string {
-	c.row = c.row + 1
+	if c.row == 0 {
+		c.row = 1
+	}
 	return fmt.Sprintf("%s%d", excelize.ToAlphaString(c.column), c.row)
 }
 
@@ -161,8 +114,8 @@ func (c Coordinates) ColumnExistsIn(coords []Coordinates) bool {
 	return false
 }
 
-// Coordinates returns a Coordinates Struct from a string
-func coordinates(s string) Coordinates {
+// CoordsFromString returns a Coordinates Struct from a string
+func CoordsFromString(s string) Coordinates {
 	reg := regexp.MustCompile("[0-9]+|[A-Z]+")
 	result := reg.FindAllString(s, 2)
 	n, _ := strconv.Atoi(result[1])
@@ -225,17 +178,14 @@ func Coords(col, row int) string {
 
 // Add inserts a insertable struct into a given file.
 func Add(excel *Excel, data Insertable) {
-	//rows := excel.File.GetRows(excel.ActiveSheetName)
 	if excel.isEmpty() {
 		fmt.Println("file is empty, adding header")
-		//fmt.Println(excel.File.GetCellValue(excel.ActiveSheetName, "A1"))
 		headerCoords := Coordinates{row: 0, column: 0}
 		for _, col := range data.Columns() {
 			fmt.Printf("writing header %s at %s\n", col, headerCoords.CoordString())
 			excel.File.SetCellStr(excel.ActiveSheetName, headerCoords.CoordString(), col)
 			headerCoords.column = headerCoords.column + 1
 		}
-		fmt.Println(excel.File.GetRows(excel.ActiveSheetName)[0])
 	}
 	data.Insert(excel)
 }
