@@ -32,22 +32,58 @@ func (excel *Excel) Save(path string) {
 // CoordsForHeader returns the coords for the next free row and the given header
 func (excel *Excel) CoordsForHeader(header string) Coordinates {
 	rows := excel.File.GetRows(excel.ActiveSheetName)
-	for i, column := range rows[0] {
-		//fmt.Println(column)
-		if column == header {
-			freeRowIndex := 0
-			for j := range rows {
-				if excel.File.GetCellValue(excel.ActiveSheetName, Coordinates{column: i, row: j}.CoordString()) == "" {
-					freeRowIndex = j
-				}
-			}
-			coords := Coordinates{column: i, row: freeRowIndex}
-			fmt.Printf("next free cell for header %s is at %s\n", header, coords.CoordString())
-			return coords
+	var freeRow int
+	headerColumn := -1
+	for index, row := range rows {
+		//fmt.Println(row)
+		if emptySlice(row) && headerColumn == -1 {
+			fmt.Println("row is empty")
+			continue
 		}
+		for j, column := range row {
+			if column == header && headerColumn == -1 {
+				headerColumn = j
+				continue
+			}
+		}
+		if headerColumn != -1 {
+			if row[headerColumn] == "" {
+				freeRow = index
+				coords := Coordinates{
+					column: headerColumn,
+					row:    freeRow + 1,
+				}
+				fmt.Printf("next free coords for header %s: %s\n", header, coords.CoordString())
+			}
+		}
+
 	}
-	return Coordinates{0, 0}
+	//fmt.Println("couldn't determine next free Cell")
+	return Coordinates{
+		column: 0,
+		row:    0,
+	}
 }
+
+// CoordsForHeader returns the coords for the next free row and the given header
+// func (excel *Excel) CoordsForHeader(header string) Coordinates {
+// 	rows := excel.File.GetRows(excel.ActiveSheetName)
+// 	for i, column := range rows[0] {
+// 		//fmt.Println(column)
+// 		if column == header {
+// 			freeRowIndex := 1
+// 			for j := range rows {
+// 				if excel.File.GetCellValue(excel.ActiveSheetName, Coordinates{column: i, row: freeRowIndex}.CoordString()) == "" {
+// 					freeRowIndex = freeRowIndex + j
+// 				}
+// 			}
+// 			coords := Coordinates{column: i, row: freeRowIndex}
+// 			fmt.Printf("next free cell for header %s is at %s\n", header, coords.CoordString())
+// 			return coords
+// 		}
+// 	}
+// 	return Coordinates{0, 0}
+// }
 
 // AddValue adds a value to the provided coordinates
 func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
@@ -190,15 +226,16 @@ func Coords(col, row int) string {
 // Add inserts a insertable struct into a given file.
 func Add(excel *Excel, data Insertable) {
 	//rows := excel.File.GetRows(excel.ActiveSheetName)
-	if excel.isEmpty() { //if excel.File.GetCellValue(excel.ActiveSheetName, "A1") == "" {
+	if excel.isEmpty() {
+		fmt.Println("file is empty, adding header")
 		//fmt.Println(excel.File.GetCellValue(excel.ActiveSheetName, "A1"))
 		headerCoords := Coordinates{row: 0, column: 0}
 		for _, col := range data.Columns() {
-			//fmt.Printf("adding %s to coordinates %s\n", col, headerCoords.CoordString())
 			fmt.Printf("writing header %s at %s\n", col, headerCoords.CoordString())
 			excel.File.SetCellStr(excel.ActiveSheetName, headerCoords.CoordString(), col)
 			headerCoords.column = headerCoords.column + 1
 		}
+		fmt.Println(excel.File.GetRows(excel.ActiveSheetName)[0])
 	}
 	data.Insert(excel)
 }
@@ -218,4 +255,13 @@ func (excel *Excel) isEmpty() bool {
 		return true
 	}
 	return false
+}
+
+func emptySlice(slice []string) bool {
+	for _, s := range slice {
+		if s != "" {
+			return false
+		}
+	}
+	return true
 }

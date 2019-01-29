@@ -65,7 +65,7 @@ func (p *Project) Columns() []string {
 func (p *Project) Insert(excel *Excel) {
 
 	header := structs.Names(p)
-
+	//fmt.Println(header)
 	excel.AddValue(excel.CoordsForHeader(header[0]), p.customer)
 	excel.AddValue(excel.CoordsForHeader(header[1]), p.number)
 	excel.AddValue(excel.CoordsForHeader(header[2]), p.externalCostsChargeable)
