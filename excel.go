@@ -33,11 +33,17 @@ func (excel *Excel) Save(path string) {
 func (excel *Excel) CoordsForHeader(header string) Coordinates {
 	rows := excel.File.GetRows(excel.ActiveSheetName)
 	for i, column := range rows[0] {
+		fmt.Println(column)
 		if column == header {
-			return Coordinates{
-				column: i,
-				row:    excel.NextRow(),
+			freeRowIndex := 0
+			for j := range rows {
+				if excel.File.GetCellValue(excel.ActiveSheetName, Coordinates{column: i, row: j}.CoordString()) == "" {
+					freeRowIndex = j
+				}
 			}
+			coords := Coordinates{column: i, row: freeRowIndex}
+			fmt.Printf("next free cell for header %s is at %s\n", header, coords.CoordString())
+			return coords
 		}
 	}
 	return Coordinates{0, 0}
@@ -51,31 +57,22 @@ func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
 
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
 func ExcelFile(path string, sheetname string) Excel {
-	created := false
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Println("file not existing, creating new...")
-		newFile := excelize.NewFile()
-		newFile.SaveAs(path)
-		created = true
+		eFile := excelize.NewFile()
+		sheetIndex := eFile.GetActiveSheetIndex()
+		oldName := eFile.GetSheetName(sheetIndex)
+		eFile.SetSheetName(oldName, "result")
+		return Excel{
+			File:            eFile,
+			ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
+		}
 	}
-	excelFile, err := excelize.OpenFile(path)
-
-	if err != nil {
-		fmt.Print(err)
+	eFile, _ := excelize.OpenFile(path)
+	return Excel{
+		File:            eFile,
+		ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
 	}
-
-	if created {
-		sheetIndex := excelFile.GetActiveSheetIndex()
-		oldName := excelFile.GetSheetName(sheetIndex)
-		excelFile.SetSheetName(oldName, "result")
-	}
-
-	e := Excel{
-		File:            excelFile,
-		ActiveSheetName: excelFile.GetSheetName(excelFile.GetActiveSheetIndex()),
-	}
-	fmt.Printf("%v+", e)
-	return e
 }
 
 // Insertable defines Methods for structs to be insertable in a excelfile
@@ -99,6 +96,7 @@ type CoordsTransmutable interface {
 
 // CoordString returns the coordinates as excelformatted string
 func (c Coordinates) CoordString() string {
+	c.row = c.row + 1
 	return fmt.Sprintf("%s%d", excelize.ToAlphaString(c.column), c.row)
 }
 
@@ -189,14 +187,15 @@ func Coords(col, row int) string {
 	return fmt.Sprintf("%s%d", alpha, row)
 }
 
-// Add inserts a insertable struct into a given file. Creates a new file if necessary
+// Add inserts a insertable struct into a given file.
 func Add(excel *Excel, data Insertable) {
 	//rows := excel.File.GetRows(excel.ActiveSheetName)
-
-	if excel.File.GetCellValue(excel.ActiveSheetName, "A1") == "" {
-		headerCoords := Coordinates{row: 1, column: 0}
+	if excel.isEmpty() { //if excel.File.GetCellValue(excel.ActiveSheetName, "A1") == "" {
+		//fmt.Println(excel.File.GetCellValue(excel.ActiveSheetName, "A1"))
+		headerCoords := Coordinates{row: 0, column: 0}
 		for _, col := range data.Columns() {
 			//fmt.Printf("adding %s to coordinates %s\n", col, headerCoords.CoordString())
+			fmt.Printf("writing header %s at %s\n", col, headerCoords.CoordString())
 			excel.File.SetCellStr(excel.ActiveSheetName, headerCoords.CoordString(), col)
 			headerCoords.column = headerCoords.column + 1
 		}
