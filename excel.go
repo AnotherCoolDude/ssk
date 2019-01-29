@@ -33,7 +33,7 @@ func (excel *Excel) Save(path string) {
 func (excel *Excel) CoordsForHeader(header string) Coordinates {
 	rows := excel.File.GetRows(excel.ActiveSheetName)
 	for i, column := range rows[0] {
-		fmt.Println(column)
+		//fmt.Println(column)
 		if column == header {
 			freeRowIndex := 0
 			for j := range rows {
