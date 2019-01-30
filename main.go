@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	rentabilität       = "/Users/empfang/Desktop/fremdkosten/rentabilität.xlsx"
-	eingangsrechnungen = "/Users/empfang/Desktop/fremdkosten/eingangsrechnungen.xlsx"
-	resultPath         = "/Users/empfang/Desktop/fremdkosten/result.xlsx"
+	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rentabilität.xlsx"
+	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/eingangsrechnungen.xlsx"
+	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result.xlsx"
 )
 
 var (
@@ -95,7 +95,37 @@ func (p *Project) Insert(excel *Excel) {
 		excel.AddValue(Coordinates{column: 4, row: row + i + 1}, p.invoice[i])
 		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, er)
 	}
+	sCoords := Coordinates{
+		column: 4,
+		row:    row + 1,
+	}
+	eCoords := Coordinates{
+		column: 4,
+		row:    row + len(p.fibu),
+	}
+	f := Formula{
+		CoordsRange: []Coordinates{sCoords, eCoords},
+		Method:      Sum,
+	}
+	excel.AddFormula(Coordinates{column: 4, row: row + len(p.fibu) + 1}, f)
+	excel.AddValue(Coordinates{column: 2, row: row + len(p.fibu) + 1}, p.externalCostsChargeable)
+	excel.AddValue(Coordinates{column: 3, row: row + len(p.fibu) + 1}, p.externalCosts)
+	excel.AddValue(Coordinates{column: 6, row: row + len(p.fibu) + 1}, p.income)
+	excel.AddValue(Coordinates{column: 7, row: row + len(p.fibu) + 1}, p.revenue)
 
+	excel.AddStyle([]Coordinates{
+		Coordinates{column: 2, row: row + len(p.fibu) + 1},
+		Coordinates{column: 7, row: row + len(p.fibu) + 1},
+	}, BorderTop)
+
+	excel.AddEmptyRow(row + len(p.fibu) + 2)
+	// excel.AddFormula(Coordinates{column: 5, row: row + len(p.fibu) + 1}, Formula{
+	// 	CoordsRange: []Coordinates{
+	// 		Coordinates{column: 2, row: row + len(p.fibu) + 1},
+	// 		Coordinates{column: 3, row: row + len(p.fibu) + 1},
+	// 	},
+	// 	Method: Sum,
+	// })
 }
 
 func mustParse(s string) float32 {

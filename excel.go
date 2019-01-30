@@ -9,6 +9,14 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
+const (
+	// Sum is used to sum up the value of cells
+	Sum Method = 0
+
+	// BorderTop adds a border to the top of the cell
+	BorderTop StyleType = 0
+)
+
 // Excel wraps the excelize package
 type Excel struct {
 	File            *excelize.File
@@ -17,8 +25,34 @@ type Excel struct {
 
 // Formula wraps a formula into a struct
 type Formula struct {
-	coordsRange []Coordinates
-	method      string
+	CoordsRange []Coordinates
+	Method      Method
+}
+
+// Method represents the methods, than can be performed by a formula
+type Method int
+
+func (m Method) toString(coords []Coordinates) string {
+	switch m {
+	case Sum:
+		return fmt.Sprintf("=SUMME(%s:%s)", coords[0].CoordString(), coords[1].CoordString())
+	default:
+		fmt.Println("unknown Method used...")
+		return ""
+	}
+}
+
+// StyleType defines the types a cell can be styled with
+type StyleType int
+
+func (st StyleType) toString() string {
+	switch st {
+	case BorderTop:
+		return fmt.Sprintf(`{"border":[{"type":"top","color":"000000","style":1}]}`)
+	default:
+		fmt.Println("unknown Style used...")
+		return ""
+	}
 }
 
 // NextRow returns the next free Row
@@ -48,8 +82,28 @@ func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
 	excel.File.SetCellValue(excel.ActiveSheetName, coords.CoordString(), value)
 }
 
+// AddFormula adds a formula to the provided coordinates
 func (excel *Excel) AddFormula(coords Coordinates, formula Formula) {
+	if coords.CoordString() == formula.CoordsRange[1].CoordString() || coords.CoordString() == formula.CoordsRange[0].CoordString() {
+		v := excel.File.GetCellValue(excel.ActiveSheetName, formula.CoordsRange[0].CoordString())
+		excel.File.SetCellValue(excel.ActiveSheetName, coords.CoordString(), v)
+		return
+	}
+	excel.File.SetCellFormula(excel.ActiveSheetName, coords.CoordString(), formula.Method.toString(formula.CoordsRange))
+}
 
+// AddStyle adds a Style to the range of the provided coordinates
+func (excel *Excel) AddStyle(coordsRange []Coordinates, styleType StyleType) {
+	style, err := excel.File.NewStyle(styleType.toString())
+	if err != nil {
+		fmt.Println(err)
+	}
+	excel.File.SetCellStyle(excel.ActiveSheetName, coordsRange[0].CoordString(), coordsRange[1].CoordString(), style)
+}
+
+// AddEmptyRow adds an empty row at index row
+func (excel *Excel) AddEmptyRow(row int) {
+	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: row}.CoordString(), " ")
 }
 
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
