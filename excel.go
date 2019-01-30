@@ -15,6 +15,12 @@ type Excel struct {
 	ActiveSheetName string
 }
 
+// Formula wraps a formula into a struct
+type Formula struct {
+	coordsRange []Coordinates
+	method      string
+}
+
 // NextRow returns the next free Row
 func (excel *Excel) NextRow() int {
 	return len(excel.File.GetRows(excel.ActiveSheetName)) + 1
@@ -40,6 +46,10 @@ func (excel *Excel) ColumnForHeader(header string) string {
 // AddValue adds a value to the provided coordinates
 func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
 	excel.File.SetCellValue(excel.ActiveSheetName, coords.CoordString(), value)
+}
+
+func (excel *Excel) AddFormula(coords Coordinates, formula Formula) {
+
 }
 
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname

@@ -41,14 +41,6 @@ func main() {
 		})
 	}
 
-	style, err := erExcel.File.NewStyle(`{"number_format":{"type":"General"}}`)
-	if err != nil {
-		fmt.Println(err)
-	}
-	erExcel.File.SetCellStyle(erExcel.ActiveSheetName, "F2", "F2", style)
-	testData := erExcel.File.GetCellValue(erExcel.ActiveSheetName, "F2")
-	fmt.Printf("test data %s\n", testData)
-
 	erData := FilterColumns(&erExcel, erColumns)
 
 	for _, row := range erData {
@@ -103,6 +95,7 @@ func (p *Project) Insert(excel *Excel) {
 		excel.AddValue(Coordinates{column: 4, row: row + i + 1}, p.invoice[i])
 		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, er)
 	}
+
 }
 
 func mustParse(s string) float32 {
