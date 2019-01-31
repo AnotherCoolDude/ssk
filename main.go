@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"strings"
 )
 
 const (
@@ -83,63 +84,78 @@ func (p *Project) Columns() []string {
 	return []string{
 		"Kunde",
 		"Jobnr",
-		"Erlös",
+		"AR Erlös",
 		"FK wb",
 		"FK nwb",
-		"Eingangsr",
+		"ER Aufwendungen",
 		"ER FiBu",
 		"Paginiernr",
 		"Umsatz vor EL",
 	}
 }
 
-// 0=Kunde 1=Jobnr 2=FKwb 3=FKnwb 4=Eingangsr 5=FiBu 6=Pagnr 7=Umsatz
+// 0=Kunde 1=Jobnr 2=Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Pagnr 8=Umsatz
+
 // Insert inserts values from struct Project
 func (p *Project) Insert(excel *Excel) {
+	var newCustomer bool
 	row := excel.NextRow()
-	excel.AddValue(Coordinates{column: 0, row: row}, p.customer)
+
+	if row-2 > 0 {
+		currentPrefix := jobnrPrefix(p.number)
+		lastPrefix := jobnrPrefix(excel.GetValue(Coordinates{column: 1, row: row - 2}))
+		if currentPrefix != lastPrefix {
+			newCustomer = true
+		} else {
+			newCustomer = false
+		}
+	}
+
 	excel.AddValue(Coordinates{column: 1, row: row}, p.number)
-	excel.AddValue(Coordinates{column: 2, row: row}, p.number)
+	excel.AddValue(Coordinates{column: 2, row: row}, p.revenue)
 	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable)
 	excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts)
 	excel.AddValue(Coordinates{column: 8, row: row}, p.revBevorOwnPerf)
 
+	var sumER float32
+
 	for i, er := range p.fibu {
+		sumER = sumER + p.invoice[i]
 		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i])
 		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, er)
 		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i])
 	}
-	sCoords := Coordinates{
-		column: 4,
-		row:    row + 1,
-	}
-	eCoords := Coordinates{
-		column: 4,
-		row:    row + len(p.fibu),
-	}
-	f := Formula{
-		CoordsRange: []Coordinates{sCoords, eCoords},
-		Method:      Sum,
-	}
-	excel.AddFormula(Coordinates{column: 4, row: row + len(p.fibu) + 1}, f)
-	excel.AddValue(Coordinates{column: 2, row: row + len(p.fibu) + 1}, p.externalCostsChargeable)
-	excel.AddValue(Coordinates{column: 3, row: row + len(p.fibu) + 1}, p.externalCosts)
-	excel.AddValue(Coordinates{column: 6, row: row + len(p.fibu) + 1}, p.income)
-	excel.AddValue(Coordinates{column: 7, row: row + len(p.fibu) + 1}, p.revenue)
+
+	resultRow := row + len(p.fibu) + 2
 
 	excel.AddStyle([]Coordinates{
-		Coordinates{column: 2, row: row + len(p.fibu) + 1},
-		Coordinates{column: 7, row: row + len(p.fibu) + 1},
+		Coordinates{column: 2, row: resultRow},
+		Coordinates{column: 8, row: resultRow},
 	}, BorderTop)
 
-	excel.AddEmptyRow(row + len(p.fibu) + 2)
-	// excel.AddFormula(Coordinates{column: 5, row: row + len(p.fibu) + 1}, Formula{
-	// 	CoordsRange: []Coordinates{
-	// 		Coordinates{column: 2, row: row + len(p.fibu) + 1},
-	// 		Coordinates{column: 3, row: row + len(p.fibu) + 1},
-	// 	},
-	// 	Method: Sum,
-	// })
+	excel.AddStyle([]Coordinates{
+		Coordinates{column: 2, row: row},
+		Coordinates{column: 2, row: resultRow - 1},
+	}, BorderLeftRight)
+
+	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue)
+	excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable)
+	excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts)
+	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER)
+	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.revBevorOwnPerf)
+
+	excel.AddEmptyRow(resultRow + 1)
+
+	if newCustomer {
+		summaryRow := resultRow + 2
+		excel.AddStyle([]Coordinates{
+			Coordinates{column: 0, row: summaryRow},
+			Coordinates{column: 8, row: summaryRow},
+		}, BorderTop)
+		excel.AddValue(Coordinates{column: 0, row: summaryRow}, p.customer)
+		excel.AddValue(Coordinates{column: 0, row: summaryRow}, p.customer)
+	}
+
 }
 
 func mustParse(s string) float32 {
@@ -148,4 +164,9 @@ func mustParse(s string) float32 {
 		panic("couldn't parse string")
 	}
 	return float32(v)
+}
+
+func jobnrPrefix(jobnr string) string {
+	splited := strings.Split(jobnr, "-")
+	return splited[0]
 }

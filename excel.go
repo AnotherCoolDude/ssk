@@ -15,6 +15,8 @@ const (
 
 	// BorderTop adds a border to the top of the cell
 	BorderTop StyleType = 0
+	// BorderLeftRight adds a border to the left and right of the cell
+	BorderLeftRight StyleType = 1
 )
 
 // Excel wraps the excelize package
@@ -49,6 +51,8 @@ func (st StyleType) toString() string {
 	switch st {
 	case BorderTop:
 		return fmt.Sprintf(`{"border":[{"type":"top","color":"000000","style":1}]}`)
+	case BorderLeftRight:
+		return fmt.Sprintf(`{"border":[{"type":"left","color":"000000","style":1}, {"type":"right","color":"000000","style":1}]}`)
 	default:
 		fmt.Println("unknown Style used...")
 		return ""
@@ -104,6 +108,11 @@ func (excel *Excel) AddStyle(coordsRange []Coordinates, styleType StyleType) {
 // AddEmptyRow adds an empty row at index row
 func (excel *Excel) AddEmptyRow(row int) {
 	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: row}.CoordString(), " ")
+}
+
+// GetValue returns the Value from the cell at coord
+func (excel *Excel) GetValue(coord Coordinates) string {
+	return excel.File.GetCellValue(excel.ActiveSheetName, coord.CoordString())
 }
 
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
