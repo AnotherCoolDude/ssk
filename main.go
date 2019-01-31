@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -49,7 +50,7 @@ func main() {
 	erData := erExcel.FilterByHeader(erHeader)
 
 	for _, row := range erData {
-
+		fmt.Print(row)
 		for i, p := range projects {
 			if row[2] == p.number {
 				projects[i].paginiernr = append(projects[i].paginiernr, row[0])
@@ -136,10 +137,10 @@ func (p *Project) Insert(excel *Excel) {
 
 	var sumER float32
 
-	for i, er := range p.fibu {
+	for i, fibu := range p.fibu {
 		sumER = sumER + p.invoice[i]
 		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i])
-		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, er)
+		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, fibu)
 		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i])
 	}
 
@@ -179,6 +180,11 @@ func (p *Project) Insert(excel *Excel) {
 	excel.AddEmptyRow(resultRow + 1)
 
 	lastProject = *p
+}
+
+// Append adds to the end of the excel file
+func (p *Project) Append(excel *Excel) {
+
 }
 
 func mustParse(s string) float32 {

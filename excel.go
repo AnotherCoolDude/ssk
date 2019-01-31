@@ -152,6 +152,7 @@ func (st StyleType) toString() string {
 type Insertable interface {
 	Columns() []string
 	Insert(excel *Excel)
+	Append(excel *Excel)
 }
 
 // Coordinates wraps coordinates in a struct
@@ -230,15 +231,18 @@ func (excel *Excel) FilterByHeader(header []string) [][]string {
 	}
 
 	data := excel.File.GetRows(excel.ActiveSheetName)
+	m := map[string]int{}
 
-	columns := []string{}
 	for i, col := range data[0] {
 		if contains(header, col) {
-			columns = append(columns, excelize.ToAlphaString(i))
+			m[col] = i
 		}
 	}
-
-	return excel.FilterByColumn(columns)
+	sortedColumns := []string{}
+	for _, h := range header {
+		sortedColumns = append(sortedColumns, excelize.ToAlphaString(m[h]))
+	}
+	return excel.FilterByColumn(sortedColumns)
 }
 
 // FilterByColumn filters the excel file by its column
