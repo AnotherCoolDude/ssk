@@ -6,28 +6,30 @@ import (
 )
 
 const (
-	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rentabilität.xlsx"
-	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/eingangsrechnungen.xlsx"
-	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result.xlsx"
+	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
+	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_18.xlsx"
+	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
 )
 
 var (
 	rentColumns = []string{"A", "C", "E", "G", "I", "L", "E"}
 	erColumns   = []string{"A", "F", "G", "K"}
+	erHeader    = []string{"Paginiernummer", "FiBu-Zeitraum", "Projektnummern", "Netto (Dokument)"}
 	rentExcel   Excel
 	erExcel     Excel
 	destExcel   Excel
 	resultsMap  map[string]float32
+	lastProject Project
 )
 
 func main() {
-	destExcel = ExcelFile(resultPath, "result")
+	destExcel = ExcelFile(resultPath, "2018")
 	rentExcel = ExcelFile(rentabilität, "")
 	erExcel = ExcelFile(eingangsrechnungen, "")
 
 	resultsMap = make(map[string]float32)
 
-	rentData := FilterColumns(&rentExcel, rentColumns)
+	rentData := rentExcel.FilterByColumn(rentColumns)
 	projects := []Project{}
 	for _, row := range rentData {
 		projects = append(projects, Project{
@@ -44,7 +46,7 @@ func main() {
 		})
 	}
 
-	erData := FilterColumns(&erExcel, erColumns)
+	erData := erExcel.FilterByHeader(erHeader)
 
 	for _, row := range erData {
 
@@ -60,6 +62,8 @@ func main() {
 	for _, p := range projects {
 		Add(&destExcel, &p)
 	}
+
+	destExcel.FreezeHeader()
 
 	destExcel.Save(resultPath)
 }
@@ -101,17 +105,27 @@ func (p *Project) Columns() []string {
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(excel *Excel) {
-	var newCustomer bool
 	row := excel.NextRow()
 
-	if row-2 > 0 {
-		currentPrefix := jobnrPrefix(p.number)
-		lastPrefix := jobnrPrefix(excel.GetValue(Coordinates{column: 1, row: row - 2}))
-		if currentPrefix != lastPrefix {
-			newCustomer = true
-		} else {
-			newCustomer = false
-		}
+	currentPrefix := jobnrPrefix(p.number)
+	lastPrefix := jobnrPrefix(lastProject.number)
+
+	// check if current project is a new customer
+	if currentPrefix != lastPrefix && lastPrefix != "" {
+		summaryRow := row + 1
+		excel.AddStyle([]Coordinates{
+			Coordinates{column: 0, row: summaryRow},
+			Coordinates{column: 8, row: summaryRow},
+		}, BorderTop)
+		excel.AddValue(Coordinates{column: 0, row: summaryRow}, lastProject.customer)
+		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"])
+		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"])
+		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"])
+		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"])
+		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["totalRevBefOwnPerf"])
+		excel.AddEmptyRow(summaryRow + 1)
+		resultsMap = make(map[string]float32)
+		row = summaryRow + 2
 	}
 
 	excel.AddValue(Coordinates{column: 1, row: row}, p.number)
@@ -129,7 +143,7 @@ func (p *Project) Insert(excel *Excel) {
 		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i])
 	}
 
-	resultRow := row + len(p.fibu) + 2
+	resultRow := row + len(p.fibu) + 1
 
 	excel.AddStyle([]Coordinates{
 		Coordinates{column: 2, row: resultRow},
@@ -140,6 +154,16 @@ func (p *Project) Insert(excel *Excel) {
 		Coordinates{column: 2, row: row},
 		Coordinates{column: 2, row: resultRow - 1},
 	}, BorderLeftRight)
+
+	excel.AddStyle([]Coordinates{
+		Coordinates{column: 4, row: row},
+		Coordinates{column: 4, row: resultRow - 1},
+	}, BorderRight)
+
+	excel.AddStyle([]Coordinates{
+		Coordinates{column: 7, row: row},
+		Coordinates{column: 7, row: resultRow - 1},
+	}, BorderRight)
 
 	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue)
 	resultsMap["totalRevenues"] += p.revenue
@@ -154,22 +178,7 @@ func (p *Project) Insert(excel *Excel) {
 
 	excel.AddEmptyRow(resultRow + 1)
 
-	if newCustomer {
-		summaryRow := resultRow + 2
-		excel.AddStyle([]Coordinates{
-			Coordinates{column: 0, row: summaryRow},
-			Coordinates{column: 8, row: summaryRow},
-		}, BorderTop)
-		excel.AddValue(Coordinates{column: 0, row: summaryRow}, p.customer)
-		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"])
-		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"])
-		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"])
-		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"])
-		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["totalRevBefOwnPerf"])
-		excel.AddEmptyRow(summaryRow + 1)
-		resultsMap = make(map[string]float32)
-	}
-
+	lastProject = *p
 }
 
 func mustParse(s string) float32 {
