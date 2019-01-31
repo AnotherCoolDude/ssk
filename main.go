@@ -17,12 +17,15 @@ var (
 	rentExcel   Excel
 	erExcel     Excel
 	destExcel   Excel
+	resultsMap  map[string]float32
 )
 
 func main() {
 	destExcel = ExcelFile(resultPath, "result")
 	rentExcel = ExcelFile(rentabilität, "")
 	erExcel = ExcelFile(eingangsrechnungen, "")
+
+	resultsMap = make(map[string]float32)
 
 	rentData := FilterColumns(&rentExcel, rentColumns)
 	projects := []Project{}
@@ -94,7 +97,7 @@ func (p *Project) Columns() []string {
 	}
 }
 
-// 0=Kunde 1=Jobnr 2=Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Pagnr 8=Umsatz
+// 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Pagnr 8=Umsatz vor El
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(excel *Excel) {
@@ -139,10 +142,15 @@ func (p *Project) Insert(excel *Excel) {
 	}, BorderLeftRight)
 
 	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue)
+	resultsMap["totalRevenues"] += p.revenue
 	excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable)
+	resultsMap["totalExtCostChargeable"] += p.externalCostsChargeable
 	excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts)
+	resultsMap["totalExtCost"] += p.externalCosts
 	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER)
+	resultsMap["totalER"] += sumER
 	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.revBevorOwnPerf)
+	resultsMap["totalRevBefOwnPerf"] += p.revBevorOwnPerf
 
 	excel.AddEmptyRow(resultRow + 1)
 
@@ -153,7 +161,13 @@ func (p *Project) Insert(excel *Excel) {
 			Coordinates{column: 8, row: summaryRow},
 		}, BorderTop)
 		excel.AddValue(Coordinates{column: 0, row: summaryRow}, p.customer)
-		excel.AddValue(Coordinates{column: 0, row: summaryRow}, p.customer)
+		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"])
+		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"])
+		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"])
+		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"])
+		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["totalRevBefOwnPerf"])
+		excel.AddEmptyRow(summaryRow + 1)
+		resultsMap = make(map[string]float32)
 	}
 
 }
