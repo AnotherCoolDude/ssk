@@ -26,20 +26,25 @@ type Excel struct {
 }
 
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
-func ExcelFile(path string, sheetname string) Excel {
+func ExcelFile(path string, sheetname string) *Excel {
+	var eFile *excelize.File
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Println("file not existing, creating new...")
-		eFile := excelize.NewFile()
+		eFile = excelize.NewFile()
 		sheetIndex := eFile.GetActiveSheetIndex()
 		oldName := eFile.GetSheetName(sheetIndex)
-		eFile.SetSheetName(oldName, "result")
-		return Excel{
-			File:            eFile,
-			ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
+		eFile.SetSheetName(oldName, sheetname)
+		// return &Excel{
+		// 	File:            eFile,
+		// 	ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
+		// }
+	} else {
+		eFile, err = excelize.OpenFile(path)
+		if err != nil {
+			fmt.Printf("couldn't open file at path\n%s\nerr: %s", path, err)
 		}
 	}
-	eFile, _ := excelize.OpenFile(path)
-	return Excel{
+	return &Excel{
 		File:            eFile,
 		ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
 	}
@@ -53,18 +58,6 @@ func (excel *Excel) NextRow() int {
 // Save saves the Excelfile to the provided path
 func (excel *Excel) Save(path string) {
 	excel.File.SaveAs(path)
-}
-
-// ColumnForHeader returns the column for the proived header
-func (excel *Excel) ColumnForHeader(header string) string {
-	headerCol := excel.File.GetRows(excel.ActiveSheetName)[0]
-	for i, head := range headerCol {
-		if head == header {
-			return excelize.ToAlphaString(i)
-		}
-	}
-	fmt.Printf("couldn't find header %s\n", header)
-	return ""
 }
 
 // AddValue adds a value to the provided coordinates
@@ -119,7 +112,6 @@ func (st StyleType) toString() string {
 type Insertable interface {
 	Columns() []string
 	Insert(excel *Excel)
-	Append(excel *Excel)
 }
 
 // Coordinates wraps coordinates in a struct

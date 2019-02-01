@@ -16,11 +16,12 @@ var (
 	rentColumns = []string{"A", "C", "E", "G", "I", "L", "E"}
 	erColumns   = []string{"A", "F", "G", "K"}
 	erHeader    = []string{"Paginiernummer", "FiBu-Zeitraum", "Projektnummern", "Netto (Dokument)"}
-	rentExcel   Excel
-	erExcel     Excel
-	destExcel   Excel
+	rentExcel   *Excel
+	erExcel     *Excel
+	destExcel   *Excel
 	resultsMap  map[string]float32
 	lastProject Project
+	smy         summary
 )
 
 func main() {
@@ -29,6 +30,7 @@ func main() {
 	erExcel = ExcelFile(eingangsrechnungen, "")
 
 	resultsMap = make(map[string]float32)
+	smy = summary{}
 
 	rentData := rentExcel.FilterByColumn(rentColumns)
 	projects := []Project{}
@@ -63,10 +65,40 @@ func main() {
 	for _, p := range projects {
 		destExcel.Add(&p)
 	}
+	destExcel.Add(&smy)
 
 	destExcel.FreezeHeader()
 
 	destExcel.Save(resultPath)
+}
+
+type summary struct {
+	tAR            float32
+	tWB            float32
+	tNWB           float32
+	tER            float32
+	tRevBefOwnPerf float32
+}
+
+func (s *summary) Columns() []string {
+	return []string{}
+}
+
+func (s *summary) Insert(excel *Excel) {
+	row := excel.NextRow() + 1
+
+	excel.AddStyle([]Coordinates{
+		Coordinates{column: 0, row: row},
+		Coordinates{column: 8, row: row},
+	}, BorderTop)
+
+	excel.AddValue(Coordinates{column: 0, row: row}, "Gesamt")
+	excel.AddValue(Coordinates{column: 2, row: row}, smy.tAR)
+	excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB)
+	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB)
+	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER)
+	excel.AddValue(Coordinates{column: 8, row: row}, smy.tRevBefOwnPerf)
+
 }
 
 // Project defines the necessary fields for the result xlsx
@@ -121,6 +153,11 @@ func (p *Project) Insert(excel *Excel) {
 		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"])
 		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["totalRevBefOwnPerf"])
 		excel.AddEmptyRow(summaryRow + 1)
+		smy.tAR += resultsMap["totalRevenues"]
+		smy.tWB += resultsMap["totalExtCostChargeable"]
+		smy.tNWB += resultsMap["totalExtCost"]
+		smy.tER += resultsMap["totalER"]
+		smy.tRevBefOwnPerf += resultsMap["totalRevBefOwnPerf"]
 		resultsMap = make(map[string]float32)
 		row = summaryRow + 2
 	}
@@ -176,11 +213,6 @@ func (p *Project) Insert(excel *Excel) {
 	excel.AddEmptyRow(resultRow + 1)
 
 	lastProject = *p
-}
-
-// Append adds to the end of the excel file
-func (p *Project) Append(excel *Excel) {
-
 }
 
 func mustParse(s string) float32 {
