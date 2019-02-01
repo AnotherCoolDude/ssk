@@ -61,7 +61,7 @@ func main() {
 	}
 
 	for _, p := range projects {
-		Add(&destExcel, &p)
+		destExcel.Add(&p)
 	}
 
 	destExcel.FreezeHeader()
@@ -85,10 +85,6 @@ type Project struct {
 
 // Columns returns the columnnames from struct Project
 func (p *Project) Columns() []string {
-	// for _, n := range structs.Names(p) {
-	// 	fmt.Println(n)
-	// }
-	// return structs.Names(p)
 	return []string{
 		"Kunde",
 		"Jobnr",

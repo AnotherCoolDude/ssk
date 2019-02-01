@@ -3,16 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
 const (
-	// Sum is used to sum up the value of cells
-	Sum Method = 0
-
 	// BorderTop adds a border to the top of the cell
 	BorderTop StyleType = 0
 	// BorderLeftRight adds a border to the left and right of the cell
@@ -76,16 +72,6 @@ func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
 	excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
 }
 
-// AddFormula adds a formula to the provided coordinates
-func (excel *Excel) AddFormula(coords Coordinates, formula Formula) {
-	if coords.ToString() == formula.CoordsRange[1].ToString() || coords.ToString() == formula.CoordsRange[0].ToString() {
-		v := excel.File.GetCellValue(excel.ActiveSheetName, formula.CoordsRange[0].ToString())
-		excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), v)
-		return
-	}
-	excel.File.SetCellFormula(excel.ActiveSheetName, coords.ToString(), formula.Method.toString(formula.CoordsRange))
-}
-
 // AddStyle adds a Style to the range of the provided coordinates
 func (excel *Excel) AddStyle(coordsRange []Coordinates, styleType StyleType) {
 	style, err := excel.File.NewStyle(styleType.toString())
@@ -108,25 +94,6 @@ func (excel *Excel) GetValue(coord Coordinates) string {
 // FreezeHeader freezes the headerrow
 func (excel *Excel) FreezeHeader() {
 	excel.File.SetPanes(excel.ActiveSheetName, `{"freeze":true,"split":false,"x_split":0,"y_split":1,"top_left_cell":"A34","active_pane":"bottomLeft"}`)
-}
-
-// Formula wraps a formula into a struct
-type Formula struct {
-	CoordsRange []Coordinates
-	Method      Method
-}
-
-// Method represents the methods, than can be performed by a formula
-type Method int
-
-func (m Method) toString(coords []Coordinates) string {
-	switch m {
-	case Sum:
-		return fmt.Sprintf("=SUMME(%s:%s)", coords[0].ToString(), coords[1].ToString())
-	default:
-		fmt.Println("unknown Method used...")
-		return ""
-	}
 }
 
 // StyleType defines the types a cell can be styled with
@@ -166,42 +133,6 @@ func (c Coordinates) ToString() string {
 		c.row = 1
 	}
 	return fmt.Sprintf("%s%d", excelize.ToAlphaString(c.column), c.row)
-}
-
-// ColumnAlpha returns the column as excelformatted string
-func (c Coordinates) ColumnAlpha() string {
-	return fmt.Sprintf("%s", excelize.ToAlphaString(c.column))
-}
-
-// ExistsIn checks, if coords contains c
-func (c Coordinates) existsIn(coords []Coordinates) bool {
-	for _, coord := range coords {
-		if c.ToString() == coord.ToString() {
-			return true
-		}
-	}
-	return false
-}
-
-// ColumnExistsIn checks, if c's column exists in coords
-func (c Coordinates) columnExistsIn(coords []Coordinates) bool {
-	for _, coord := range coords {
-		if c.ColumnAlpha() == coord.ColumnAlpha() {
-			return true
-		}
-	}
-	return false
-}
-
-// CoordsFromString returns a Coordinates Struct from a string
-func coordsFromString(s string) Coordinates {
-	reg := regexp.MustCompile("[0-9]+|[A-Z]+")
-	result := reg.FindAllString(s, 2)
-	n, _ := strconv.Atoi(result[1])
-	return Coordinates{
-		row:    n,
-		column: excelize.TitleToNumber(result[0]),
-	}
 }
 
 // PrintHeader prints a table that contains the header of each sheet and it's index
@@ -252,26 +183,26 @@ func (excel *Excel) FilterByColumn(columns []string) [][]string {
 	}
 	data := excel.File.GetRows(excel.ActiveSheetName)
 	filteredData := [][]string{}
-	filterCoords := []Coordinates{}
-	for _, col := range columns {
-		filterCoords = append(filterCoords, Coordinates{row: 0, column: excelize.TitleToNumber(col)})
-	}
 
-	for i, row := range data {
-		filteredRow := []string{}
-		for j, col := range row {
-			currentCoords := Coordinates{row: i, column: j}
-			if currentCoords.columnExistsIn(filterCoords) {
-				filteredRow = append(filteredRow, col)
+	for _, row := range data {
+		filterMap := map[string]string{}
+		for col, val := range row {
+			if contains(columns, excelize.ToAlphaString(col)) {
+				filterMap[excelize.ToAlphaString(col)] = val
 			}
 		}
-		filteredData = append(filteredData, filteredRow)
+		sortedRow := []string{}
+		for _, c := range columns {
+			sortedRow = append(sortedRow, filterMap[c])
+		}
+		filteredData = append(filteredData, sortedRow)
 	}
+
 	return filteredData[1:]
 }
 
 // Add inserts a insertable struct into a given file.
-func Add(excel *Excel, data Insertable) {
+func (excel *Excel) Add(data Insertable) {
 	if excel.isEmpty() {
 		fmt.Println("file is empty, adding header")
 		headerCoords := Coordinates{row: 0, column: 0}
@@ -299,13 +230,4 @@ func (excel *Excel) isEmpty() bool {
 		return true
 	}
 	return false
-}
-
-func emptySlice(slice []string) bool {
-	for _, s := range slice {
-		if s != "" {
-			return false
-		}
-	}
-	return true
 }
