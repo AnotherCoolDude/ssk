@@ -218,7 +218,6 @@ func contains(slice []string, value string) bool {
 
 func (excel *Excel) isEmpty() bool {
 	if len(excel.File.GetRows(excel.ActiveSheetName)) == 0 {
-		fmt.Println("file is empty")
 		return true
 	}
 	return false
