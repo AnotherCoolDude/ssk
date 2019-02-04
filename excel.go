@@ -61,16 +61,31 @@ func (excel *Excel) Save(path string) {
 }
 
 // AddValue adds a value to the provided coordinates
-func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
-	excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
+func (excel *Excel) AddValue(coords Coordinates, value interface{}, date bool) {
+	//excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
+	var style int
+	var err error
+
+	fmt.Printf("current cell style %d\n", excel.File.GetCellStyle(excel.ActiveSheetName, coords.ToString()))
+
 	switch value.(type) {
 	case float32:
-		style, err := excel.File.NewStyle(`{"number_format": 2}`)
-		if err != nil {
-			fmt.Printf("couldn't set cell type: %s\n", err)
+		excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
+		style, err = excel.File.NewStyle(`{"number_format": 2}`)
+		fmt.Printf("setting %s to float32 with style %d\n", coords.ToString(), style)
+		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), style)
+	case int:
+		excel.File.SetCellInt(excel.ActiveSheetName, coords.ToString(), value.(int))
+		if date {
+			style, err = excel.File.NewStyle(`{"number_format": 17}`)
 		}
+		fmt.Printf("setting %s to int with style %d\n", coords.ToString(), style)
 		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), style)
 	default:
+	}
+	fmt.Printf("new cell style %d\n", excel.File.GetCellStyle(excel.ActiveSheetName, coords.ToString()))
+	if err != nil {
+		fmt.Printf("couldn't create style for coords %s\n", coords.ToString())
 	}
 }
 

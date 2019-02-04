@@ -34,18 +34,18 @@ func main() {
 	rentData := rentExcel.FilterByColumn(rentColumns)
 	projects := []Project{}
 	for _, row := range rentData {
-		fk := mustParse(row[3]) + mustParse(row[4])
+		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
 		projects = append(projects, Project{
 			customer:                row[0],
 			number:                  row[1],
-			externalCostsChargeable: mustParse(row[3]),
-			externalCosts:           mustParse(row[4]),
+			externalCostsChargeable: mustParseFloat(row[3]),
+			externalCosts:           mustParseFloat(row[4]),
 			invoice:                 []float32{},
-			fibu:                    []string{},
+			fibu:                    []int{},
 			paginiernr:              []string{},
-			income:                  mustParse(row[5]),
-			revenue:                 mustParse(row[2]),
-			db1:                     mustParse(row[2]) - fk,
+			income:                  mustParseFloat(row[5]),
+			revenue:                 mustParseFloat(row[2]),
+			db1:                     mustParseFloat(row[2]) - fk,
 		})
 	}
 
@@ -56,8 +56,8 @@ func main() {
 		for i, p := range projects {
 			if row[2] == p.number {
 				projects[i].paginiernr = append(projects[i].paginiernr, row[0])
-				projects[i].fibu = append(projects[i].fibu, row[1])
-				projects[i].invoice = append(projects[i].invoice, mustParse(row[3]))
+				projects[i].fibu = append(projects[i].fibu, mustParseInt(row[1]))
+				projects[i].invoice = append(projects[i].invoice, mustParseFloat(row[3]))
 			}
 		}
 	}
@@ -92,12 +92,12 @@ func (s *summary) Insert(excel *Excel) {
 		Coordinates{column: 8, row: row},
 	}, BorderTop)
 
-	excel.AddValue(Coordinates{column: 0, row: row}, "Gesamt")
-	excel.AddValue(Coordinates{column: 2, row: row}, smy.tAR)
-	excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB)
-	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB)
-	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER)
-	excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1)
+	excel.AddValue(Coordinates{column: 0, row: row}, "Gesamt", false)
+	excel.AddValue(Coordinates{column: 2, row: row}, smy.tAR, false)
+	excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB, false)
+	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB, false)
+	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER, false)
+	excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1, false)
 	excel.AddCondition(Coordinates{column: 5, row: row}, smy.tNWB+smy.tWB)
 }
 
@@ -108,7 +108,7 @@ type Project struct {
 	externalCostsChargeable float32
 	externalCosts           float32
 	invoice                 []float32
-	fibu                    []string
+	fibu                    []int
 	paginiernr              []string
 	income                  float32
 	revenue                 float32
@@ -146,12 +146,12 @@ func (p *Project) Insert(excel *Excel) {
 			Coordinates{column: 0, row: summaryRow},
 			Coordinates{column: 8, row: summaryRow},
 		}, BorderTop)
-		excel.AddValue(Coordinates{column: 0, row: summaryRow}, lastProject.customer)
-		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"])
-		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"])
-		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"])
-		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"])
-		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"])
+		excel.AddValue(Coordinates{column: 0, row: summaryRow}, lastProject.customer, false)
+		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"], false)
+		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"], false)
+		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"], false)
+		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"], false)
+		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"], false)
 		excel.AddCondition(Coordinates{column: 5, row: summaryRow}, resultsMap["totalExtCostChargeable"]+resultsMap["totalExtCost"])
 		excel.AddEmptyRow(summaryRow + 1)
 		smy.tAR += resultsMap["totalRevenues"]
@@ -163,19 +163,19 @@ func (p *Project) Insert(excel *Excel) {
 		row = summaryRow + 2
 	}
 
-	excel.AddValue(Coordinates{column: 1, row: row}, p.number)
-	excel.AddValue(Coordinates{column: 2, row: row}, p.revenue)
-	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable)
-	excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts)
-	excel.AddValue(Coordinates{column: 8, row: row}, p.db1)
+	excel.AddValue(Coordinates{column: 1, row: row}, p.number, false)
+	excel.AddValue(Coordinates{column: 2, row: row}, p.revenue, false)
+	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable, false)
+	excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts, false)
+	excel.AddValue(Coordinates{column: 8, row: row}, p.db1, false)
 
 	var sumER float32
 
 	for i, fibu := range p.fibu {
 		sumER = sumER + p.invoice[i]
-		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i])
-		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, fibu)
-		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i])
+		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i], false)
+		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, fibu, true)
+		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i], false)
 	}
 
 	resultRow := row + len(p.fibu) + 1
@@ -200,16 +200,16 @@ func (p *Project) Insert(excel *Excel) {
 		Coordinates{column: 7, row: resultRow - 1},
 	}, BorderRight)
 
-	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue)
+	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue, false)
 	resultsMap["totalRevenues"] += p.revenue
-	excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable)
+	excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable, false)
 	resultsMap["totalExtCostChargeable"] += p.externalCostsChargeable
-	excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts)
+	excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts, false)
 	resultsMap["totalExtCost"] += p.externalCosts
-	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER)
+	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER, false)
 	resultsMap["totalER"] += sumER
 	excel.AddCondition(Coordinates{column: 5, row: resultRow}, p.externalCostsChargeable+p.externalCosts)
-	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1)
+	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1, false)
 	resultsMap["db1"] += p.db1
 
 	excel.AddEmptyRow(resultRow + 1)
@@ -217,12 +217,20 @@ func (p *Project) Insert(excel *Excel) {
 	lastProject = *p
 }
 
-func mustParse(s string) float32 {
+func mustParseFloat(s string) float32 {
 	v, err := strconv.ParseFloat(s, 32)
 	if err != nil {
 		panic("couldn't parse string")
 	}
 	return float32(v)
+}
+
+func mustParseInt(s string) int {
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		panic("couldn't parse string")
+	}
+	return v
 }
 
 func jobnrPrefix(jobnr string) string {
