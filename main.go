@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
 
 const (
 	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
-	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_18.xlsx"
+	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_nov17-jan19.xlsx"
 	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
 )
 
@@ -53,7 +52,7 @@ func main() {
 	erData := erExcel.FilterByHeader(erHeader)
 
 	for _, row := range erData {
-		fmt.Print(row)
+
 		for i, p := range projects {
 			if row[2] == p.number {
 				projects[i].paginiernr = append(projects[i].paginiernr, row[0])
@@ -99,7 +98,7 @@ func (s *summary) Insert(excel *Excel) {
 	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB)
 	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER)
 	excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1)
-
+	excel.AddCondition(Coordinates{column: 5, row: row}, smy.tNWB+smy.tWB)
 }
 
 // Project defines the necessary fields for the result xlsx
@@ -153,6 +152,7 @@ func (p *Project) Insert(excel *Excel) {
 		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"])
 		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"])
 		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"])
+		excel.AddCondition(Coordinates{column: 5, row: summaryRow}, resultsMap["totalExtCostChargeable"]+resultsMap["totalExtCost"])
 		excel.AddEmptyRow(summaryRow + 1)
 		smy.tAR += resultsMap["totalRevenues"]
 		smy.tWB += resultsMap["totalExtCostChargeable"]
@@ -208,6 +208,7 @@ func (p *Project) Insert(excel *Excel) {
 	resultsMap["totalExtCost"] += p.externalCosts
 	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER)
 	resultsMap["totalER"] += sumER
+	excel.AddCondition(Coordinates{column: 5, row: resultRow}, p.externalCostsChargeable+p.externalCosts)
 	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1)
 	resultsMap["db1"] += p.db1
 

@@ -67,7 +67,7 @@ func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
 	case float32:
 		style, err := excel.File.NewStyle(`{"number_format": 2}`)
 		if err != nil {
-			fmt.Printf("couldn't set cell type to float32: %s\n", err)
+			fmt.Printf("couldn't set cell type: %s\n", err)
 		}
 		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), style)
 	default:
@@ -86,6 +86,16 @@ func (excel *Excel) AddStyle(coordsRange []Coordinates, styleType StyleType) {
 // AddEmptyRow adds an empty row at index row
 func (excel *Excel) AddEmptyRow(row int) {
 	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: row}.ToString(), " ")
+}
+
+// AddCondition adds a condition, that fills the cell red if its value is less than comparison
+func (excel *Excel) AddCondition(coord Coordinates, comparison float32) {
+	compString := fmt.Sprintf("%f", comparison)
+	format, err := excel.File.NewConditionalStyle(`{"fill":{"type":"pattern","color":["#F44E42"],"pattern":1}}`)
+	if err != nil {
+		fmt.Printf("couldn't create conditional style: %s\n", err)
+	}
+	excel.File.SetConditionalFormat(excel.ActiveSheetName, coord.ToString(), fmt.Sprintf(`[{"type":"cell","criteria":"<","format":%d,"value":%s}]`, format, compString))
 }
 
 // GetValue returns the Value from the cell at coord
