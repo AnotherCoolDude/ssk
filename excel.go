@@ -63,6 +63,15 @@ func (excel *Excel) Save(path string) {
 // AddValue adds a value to the provided coordinates
 func (excel *Excel) AddValue(coords Coordinates, value interface{}) {
 	excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
+	switch value.(type) {
+	case float32:
+		style, err := excel.File.NewStyle(`{"number_format": 2}`)
+		if err != nil {
+			fmt.Printf("couldn't set cell type to float32: %s\n", err)
+		}
+		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), style)
+	default:
+	}
 }
 
 // AddStyle adds a Style to the range of the provided coordinates

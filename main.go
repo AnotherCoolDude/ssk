@@ -35,6 +35,7 @@ func main() {
 	rentData := rentExcel.FilterByColumn(rentColumns)
 	projects := []Project{}
 	for _, row := range rentData {
+		fk := mustParse(row[3]) + mustParse(row[4])
 		projects = append(projects, Project{
 			customer:                row[0],
 			number:                  row[1],
@@ -45,7 +46,7 @@ func main() {
 			paginiernr:              []string{},
 			income:                  mustParse(row[5]),
 			revenue:                 mustParse(row[2]),
-			revBevorOwnPerf:         mustParse(row[3]) - mustParse(row[4]),
+			db1:                     mustParse(row[2]) - fk,
 		})
 	}
 
@@ -73,11 +74,11 @@ func main() {
 }
 
 type summary struct {
-	tAR            float32
-	tWB            float32
-	tNWB           float32
-	tER            float32
-	tRevBefOwnPerf float32
+	tAR  float32
+	tWB  float32
+	tNWB float32
+	tER  float32
+	tDB1 float32
 }
 
 func (s *summary) Columns() []string {
@@ -97,7 +98,7 @@ func (s *summary) Insert(excel *Excel) {
 	excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB)
 	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB)
 	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER)
-	excel.AddValue(Coordinates{column: 8, row: row}, smy.tRevBefOwnPerf)
+	excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1)
 
 }
 
@@ -112,7 +113,7 @@ type Project struct {
 	paginiernr              []string
 	income                  float32
 	revenue                 float32
-	revBevorOwnPerf         float32
+	db1                     float32
 }
 
 // Columns returns the columnnames from struct Project
@@ -126,7 +127,7 @@ func (p *Project) Columns() []string {
 		"ER Aufwendungen",
 		"ER FiBu",
 		"Paginiernr",
-		"Umsatz vor EL",
+		"DB 1",
 	}
 }
 
@@ -151,13 +152,13 @@ func (p *Project) Insert(excel *Excel) {
 		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"])
 		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"])
 		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"])
-		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["totalRevBefOwnPerf"])
+		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"])
 		excel.AddEmptyRow(summaryRow + 1)
 		smy.tAR += resultsMap["totalRevenues"]
 		smy.tWB += resultsMap["totalExtCostChargeable"]
 		smy.tNWB += resultsMap["totalExtCost"]
 		smy.tER += resultsMap["totalER"]
-		smy.tRevBefOwnPerf += resultsMap["totalRevBefOwnPerf"]
+		smy.tDB1 += resultsMap["db1"]
 		resultsMap = make(map[string]float32)
 		row = summaryRow + 2
 	}
@@ -166,7 +167,7 @@ func (p *Project) Insert(excel *Excel) {
 	excel.AddValue(Coordinates{column: 2, row: row}, p.revenue)
 	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable)
 	excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts)
-	excel.AddValue(Coordinates{column: 8, row: row}, p.revBevorOwnPerf)
+	excel.AddValue(Coordinates{column: 8, row: row}, p.db1)
 
 	var sumER float32
 
@@ -207,8 +208,8 @@ func (p *Project) Insert(excel *Excel) {
 	resultsMap["totalExtCost"] += p.externalCosts
 	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER)
 	resultsMap["totalER"] += sumER
-	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.revBevorOwnPerf)
-	resultsMap["totalRevBefOwnPerf"] += p.revBevorOwnPerf
+	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1)
+	resultsMap["db1"] += p.db1
 
 	excel.AddEmptyRow(resultRow + 1)
 
