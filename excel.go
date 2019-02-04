@@ -17,6 +17,13 @@ const (
 	BorderLeft StyleType = 2
 	// BorderRight adds a border to the right of the cell
 	BorderRight StyleType = 3
+
+	Top       BorderID = 0
+	Left      BorderID = 1
+	Right     BorderID = 2
+	LeftRight BorderID = 3
+
+	Date FormatID = 0
 )
 
 // Excel wraps the excelize package
@@ -82,6 +89,7 @@ func (excel *Excel) AddValue(coords Coordinates, value interface{}, date bool) {
 		fmt.Printf("setting %s to int with style %d\n", coords.ToString(), style)
 		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), style)
 	default:
+		excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
 	}
 	fmt.Printf("new cell style %d\n", excel.File.GetCellStyle(excel.ActiveSheetName, coords.ToString()))
 	if err != nil {
@@ -125,6 +133,44 @@ func (excel *Excel) FreezeHeader() {
 
 // StyleType defines the types a cell can be styled with
 type StyleType int
+
+// Style represents the style of a cell
+type Style struct {
+	Border BorderID
+	Format FormatID
+}
+
+// BorderID represents the kind of Border
+type BorderID int
+
+// FormatID represents the formatting of the cell
+type FormatID int
+
+func (s Style) toString() string {
+	st := "{"
+	switch s.Border {
+	case Top:
+		st += `"border":[{"type":"top","color":"000000","style":1}]`
+	case Left:
+		st += `"border":[{"type":"left","color":"000000","style":1}]`
+	case Right:
+		st += `"border":[{"type":"right","color":"000000","style":1}]`
+	case LeftRight:
+		st += `"border":[{"type":"left","color":"000000","style":1}, {"type":"right","color":"000000","style":1}]`
+	}
+	if s.Border != 0 && s.Format != 0 {
+		st += ","
+	}
+
+	switch s.Format {
+	case Date:
+		st += `"number_format": 17`
+	}
+
+	st += "}"
+	fmt.Println(st)
+	return st
+}
 
 func (st StyleType) toString() string {
 	switch st {
