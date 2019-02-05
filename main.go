@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
-	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_nov17-jan19.xlsx"
-	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
+	rentabilität       = "/Users/empfang/Desktop/fremdkosten/rent_18.xlsx"
+	eingangsrechnungen = "/Users/empfang/Desktop/fremdkosten/er_nov17-jan19.xlsx"
+	resultPath         = "/Users/empfang/Desktop/fremdkosten/result_18.xlsx"
 )
 
 var (
@@ -85,17 +85,31 @@ func (s *summary) Columns() []string {
 }
 
 func (s *summary) Insert(excel *Excel) {
-	row := excel.NextRow() + 1
+	// row := excel.NextRow() + 1
 
 	tbStyle := Style{Border: Top, Format: Euro}
+	topBorderCell := Cell{" ", Style{Border: Top, Format: NoFormat}}
 
-	excel.AddValue(Coordinates{column: 0, row: row}, "Gesamt", tbStyle)
-	excel.AddValue(Coordinates{column: 2, row: row}, smy.tAR, tbStyle)
-	excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB, tbStyle)
-	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB, tbStyle)
-	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER, tbStyle)
-	excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1, tbStyle)
-	excel.AddCondition(Coordinates{column: 5, row: row}, smy.tNWB+smy.tWB)
+	totalCells := map[int]Cell{
+		0: Cell{"Gesamt", tbStyle},
+		1: topBorderCell,
+		2: Cell{smy.tAR, tbStyle},
+		3: Cell{smy.tWB, tbStyle},
+		4: Cell{smy.tNWB, tbStyle},
+		5: Cell{smy.tER, tbStyle},
+		6: topBorderCell,
+		7: topBorderCell,
+		8: Cell{smy.tDB1, tbStyle},
+	}
+	excel.AddEmpty()
+	excel.AddRow(totalCells)
+	// excel.AddValue(Coordinates{column: 0, row: row}, "Gesamt", tbStyle)
+	// excel.AddValue(Coordinates{column: 2, row: row}, smy.tAR, tbStyle)
+	// excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB, tbStyle)
+	// excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB, tbStyle)
+	// excel.AddValue(Coordinates{column: 5, row: row}, smy.tER, tbStyle)
+	// excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1, tbStyle)
+	// excel.AddCondition(Coordinates{column: 5, row: row}, smy.tNWB+smy.tWB)
 }
 
 // Project defines the necessary fields for the result xlsx
@@ -131,74 +145,121 @@ func (p *Project) Columns() []string {
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(excel *Excel) {
-	row := excel.NextRow()
+	// row := excel.NextRow()
 
 	currentPrefix := jobnrPrefix(p.number)
 	lastPrefix := jobnrPrefix(lastProject.number)
 
 	tbeStyle := Style{Border: Top, Format: Euro}
-
+	topBorderCell := Cell{" ", Style{Border: Top, Format: NoFormat}}
 	// check if current project is a new customer
 	if currentPrefix != lastPrefix && lastPrefix != "" {
-		summaryRow := row + 1
+		excel.AddEmpty()
+		//summaryRow := row + 1
 		tbnfStyle := Style{Border: Top, Format: NoFormat}
-		excel.AddValue(Coordinates{column: 0, row: summaryRow}, lastProject.customer, tbnfStyle)
-		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"], tbeStyle)
-		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"], tbeStyle)
-		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"], tbeStyle)
-		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"], tbeStyle)
-		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"], tbeStyle)
-		excel.AddCondition(Coordinates{column: 5, row: summaryRow}, resultsMap["totalExtCostChargeable"]+resultsMap["totalExtCost"])
 
-		excel.AddValue(Coordinates{column: 1, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
-		excel.AddValue(Coordinates{column: 6, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
-		excel.AddValue(Coordinates{column: 7, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
+		customerSumCells := map[int]Cell{
+			0: Cell{lastProject.customer, tbnfStyle},
+			1: topBorderCell,
+			2: Cell{resultsMap["totalRevenues"], tbeStyle},
+			3: Cell{resultsMap["totalExtCostChargeable"], tbeStyle},
+			4: Cell{resultsMap["totalExtCost"], tbeStyle},
+			5: Cell{resultsMap["totalER"], tbeStyle},
+			6: topBorderCell,
+			7: topBorderCell,
+			8: Cell{resultsMap["db1"], tbeStyle},
+		}
+		excel.AddRow(customerSumCells)
+		excel.AddEmpty()
+		excel.AddEmpty()
+		// excel.AddValue(Coordinates{column: 0, row: summaryRow}, lastProject.customer, tbnfStyle)
+		// excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"], tbeStyle)
+		// excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"], tbeStyle)
+		// excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"], tbeStyle)
+		// excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"], tbeStyle)
+		// excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"], tbeStyle)
+		// excel.AddCondition(Coordinates{column: 5, row: summaryRow}, resultsMap["totalExtCostChargeable"]+resultsMap["totalExtCost"])
 
-		excel.AddEmptyRow(summaryRow + 1)
+		// excel.AddValue(Coordinates{column: 1, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
+		// excel.AddValue(Coordinates{column: 6, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
+		// excel.AddValue(Coordinates{column: 7, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
+
+		// excel.AddEmptyRow(summaryRow + 1)
 		smy.tAR += resultsMap["totalRevenues"]
 		smy.tWB += resultsMap["totalExtCostChargeable"]
 		smy.tNWB += resultsMap["totalExtCost"]
 		smy.tER += resultsMap["totalER"]
 		smy.tDB1 += resultsMap["db1"]
 		resultsMap = make(map[string]float32)
-		row = summaryRow + 2
+		//row = summaryRow + 2
 	}
 
-	excel.AddValue(Coordinates{column: 1, row: row}, p.number, NoStyle())
-	excel.AddValue(Coordinates{column: 2, row: row}, p.revenue, EuroStyle())
-	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable, EuroStyle())
-	excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts, EuroStyle())
-	excel.AddValue(Coordinates{column: 8, row: row}, p.db1, EuroStyle())
+	projectCells := map[int]Cell{
+		1: Cell{p.number, NoStyle()},
+		2: Cell{p.revenue, EuroStyle()},
+		3: Cell{p.externalCostsChargeable, EuroStyle()},
+		4: Cell{p.externalCosts, EuroStyle()},
+		8: Cell{p.db1, EuroStyle()},
+	}
+	excel.AddRow(projectCells)
+	// excel.AddValue(Coordinates{column: 1, row: row}, p.number, NoStyle())
+	// excel.AddValue(Coordinates{column: 2, row: row}, p.revenue, EuroStyle())
+	// excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable, EuroStyle())
+	// excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts, EuroStyle())
+	// excel.AddValue(Coordinates{column: 8, row: row}, p.db1, EuroStyle())
 
 	var sumER float32
 
 	for i, fibu := range p.fibu {
+		erCells := map[int]Cell{
+			5: Cell{p.invoice[i], EuroStyle()},
+			6: Cell{fibu, DateStyle()},
+			7: Cell{p.paginiernr[i], IntegerStyle()},
+		}
 		sumER = sumER + p.invoice[i]
-		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i], EuroStyle())
-		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, fibu, DateStyle())
-		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i], IntegerStyle())
+		excel.AddRow(erCells)
+		// excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i], EuroStyle())
+		// excel.AddValue(Coordinates{column: 6, row: row + i + 1}, fibu, DateStyle())
+		// excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i], IntegerStyle())
 	}
 
-	resultRow := row + len(p.fibu) + 1
+	projectResultCells := map[int]Cell{
+		2: Cell{p.revenue, tbeStyle},
+		3: Cell{p.externalCostsChargeable, tbeStyle},
+		4: Cell{p.externalCosts, tbeStyle},
+		5: Cell{sumER, tbeStyle},
+		6: topBorderCell,
+		7: topBorderCell,
+		8: Cell{p.db1, tbeStyle},
+	}
+	excel.AddRow(projectResultCells)
+	excel.AddEmpty()
 
-	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue, tbeStyle)
 	resultsMap["totalRevenues"] += p.revenue
-	excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable, tbeStyle)
 	resultsMap["totalExtCostChargeable"] += p.externalCostsChargeable
-	excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts, tbeStyle)
 	resultsMap["totalExtCost"] += p.externalCosts
-	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER, tbeStyle)
 	resultsMap["totalER"] += sumER
-	excel.AddCondition(Coordinates{column: 5, row: resultRow}, p.externalCostsChargeable+p.externalCosts)
-	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1, tbeStyle)
 	resultsMap["db1"] += p.db1
 
-	excel.AddValue(Coordinates{column: 6, row: resultRow}, " ", Style{Border: Top, Format: NoFormat})
-	excel.AddValue(Coordinates{column: 7, row: resultRow}, " ", Style{Border: Top, Format: NoFormat})
-
-	excel.AddEmptyRow(resultRow + 1)
-
 	lastProject = *p
+	// resultRow := row + len(p.fibu) + 1
+
+	// excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue, tbeStyle)
+
+	// excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable, tbeStyle)
+
+	// excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts, tbeStyle)
+
+	// excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER, tbeStyle)
+
+	// excel.AddCondition(Coordinates{column: 5, row: resultRow}, p.externalCostsChargeable+p.externalCosts)
+	// excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1, tbeStyle)
+
+	// excel.AddValue(Coordinates{column: 6, row: resultRow}, " ", Style{Border: Top, Format: NoFormat})
+	// excel.AddValue(Coordinates{column: 7, row: resultRow}, " ", Style{Border: Top, Format: NoFormat})
+
+	// excel.AddEmptyRow(resultRow + 1)
+
 }
 
 func mustParseFloat(s string) float32 {

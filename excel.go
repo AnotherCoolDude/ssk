@@ -37,6 +37,9 @@ type Excel struct {
 	ActiveSheetName string
 }
 
+type Exceler interface {
+}
+
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
 func ExcelFile(path string, sheetname string) *Excel {
 	var eFile *excelize.File
@@ -86,6 +89,12 @@ func (excel *Excel) AddValue(coords Coordinates, value interface{}, style Style)
 // AddEmptyRow adds an empty row at index row
 func (excel *Excel) AddEmptyRow(row int) {
 	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: row}.ToString(), " ")
+}
+
+// AddEmpty adds an empty row at index row
+func (excel *Excel) AddEmpty() {
+	freeRow := excel.NextRow()
+	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: freeRow}.ToString(), " ")
 }
 
 // AddCondition adds a condition, that fills the cell red if its value is less than comparison
@@ -150,9 +159,9 @@ func (s Style) toString() string {
 	case Date:
 		st += `"number_format": 17}`
 	case Integer:
-		st += `"number_format": 2}`
+		st += `"number_format": 0}`
 	case Euro:
-		st += `"currency_format": 218}`
+		st += `"custom_number_format": "#,##0.00\\ [$\u20AC-1]"}`
 	}
 	return st
 }
@@ -272,6 +281,31 @@ func (excel *Excel) FilterByColumn(columns []string) [][]string {
 	}
 
 	return filteredData[1:]
+}
+
+// Cell wraps a cell's value and it's style in a struct
+type Cell struct {
+	value interface{}
+	style Style
+}
+
+// AddRow scanns for the next available row and inserts cells at the given indexes provided by the map
+func (excel *Excel) AddRow(columnCellMap map[int]Cell) {
+	freeRow := excel.NextRow()
+	for col, cell := range columnCellMap {
+		coords := Coordinates{column: col, row: freeRow}
+		excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), cell.value)
+		styleString := cell.style.toString()
+		if styleString == "" {
+			continue
+		}
+		st, err := excel.File.NewStyle(styleString)
+		if err != nil {
+			fmt.Println(styleString)
+			fmt.Println(err)
+		}
+		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), st)
+	}
 }
 
 // Add inserts a insertable struct into a given file.
