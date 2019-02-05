@@ -149,7 +149,11 @@ func (p *Project) Insert(excel *Excel) {
 		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"], tbeStyle)
 		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"], tbeStyle)
 		excel.AddCondition(Coordinates{column: 5, row: summaryRow}, resultsMap["totalExtCostChargeable"]+resultsMap["totalExtCost"])
+
 		excel.AddValue(Coordinates{column: 1, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
+		excel.AddValue(Coordinates{column: 6, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
+		excel.AddValue(Coordinates{column: 7, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
+
 		excel.AddEmptyRow(summaryRow + 1)
 		smy.tAR += resultsMap["totalRevenues"]
 		smy.tWB += resultsMap["totalExtCostChargeable"]
