@@ -87,17 +87,14 @@ func (s *summary) Columns() []string {
 func (s *summary) Insert(excel *Excel) {
 	row := excel.NextRow() + 1
 
-	excel.AddStyle([]Coordinates{
-		Coordinates{column: 0, row: row},
-		Coordinates{column: 8, row: row},
-	}, BorderTop)
+	tbStyle := Style{Border: Top, Format: Euro}
 
-	excel.AddValue(Coordinates{column: 0, row: row}, "Gesamt", false)
-	excel.AddValue(Coordinates{column: 2, row: row}, smy.tAR, false)
-	excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB, false)
-	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB, false)
-	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER, false)
-	excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1, false)
+	excel.AddValue(Coordinates{column: 0, row: row}, "Gesamt", tbStyle)
+	excel.AddValue(Coordinates{column: 2, row: row}, smy.tAR, tbStyle)
+	excel.AddValue(Coordinates{column: 3, row: row}, smy.tWB, tbStyle)
+	excel.AddValue(Coordinates{column: 4, row: row}, smy.tNWB, tbStyle)
+	excel.AddValue(Coordinates{column: 5, row: row}, smy.tER, tbStyle)
+	excel.AddValue(Coordinates{column: 8, row: row}, smy.tDB1, tbStyle)
 	excel.AddCondition(Coordinates{column: 5, row: row}, smy.tNWB+smy.tWB)
 }
 
@@ -139,20 +136,20 @@ func (p *Project) Insert(excel *Excel) {
 	currentPrefix := jobnrPrefix(p.number)
 	lastPrefix := jobnrPrefix(lastProject.number)
 
+	tbeStyle := Style{Border: Top, Format: Euro}
+
 	// check if current project is a new customer
 	if currentPrefix != lastPrefix && lastPrefix != "" {
 		summaryRow := row + 1
-		excel.AddStyle([]Coordinates{
-			Coordinates{column: 0, row: summaryRow},
-			Coordinates{column: 8, row: summaryRow},
-		}, BorderTop)
-		excel.AddValue(Coordinates{column: 0, row: summaryRow}, lastProject.customer, false)
-		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"], false)
-		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"], false)
-		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"], false)
-		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"], false)
-		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"], false)
+		tbnfStyle := Style{Border: Top, Format: NoFormat}
+		excel.AddValue(Coordinates{column: 0, row: summaryRow}, lastProject.customer, tbnfStyle)
+		excel.AddValue(Coordinates{column: 2, row: summaryRow}, resultsMap["totalRevenues"], tbeStyle)
+		excel.AddValue(Coordinates{column: 3, row: summaryRow}, resultsMap["totalExtCostChargeable"], tbeStyle)
+		excel.AddValue(Coordinates{column: 4, row: summaryRow}, resultsMap["totalExtCost"], tbeStyle)
+		excel.AddValue(Coordinates{column: 5, row: summaryRow}, resultsMap["totalER"], tbeStyle)
+		excel.AddValue(Coordinates{column: 8, row: summaryRow}, resultsMap["db1"], tbeStyle)
 		excel.AddCondition(Coordinates{column: 5, row: summaryRow}, resultsMap["totalExtCostChargeable"]+resultsMap["totalExtCost"])
+		excel.AddValue(Coordinates{column: 1, row: summaryRow}, " ", Style{Border: Top, Format: NoFormat})
 		excel.AddEmptyRow(summaryRow + 1)
 		smy.tAR += resultsMap["totalRevenues"]
 		smy.tWB += resultsMap["totalExtCostChargeable"]
@@ -163,54 +160,37 @@ func (p *Project) Insert(excel *Excel) {
 		row = summaryRow + 2
 	}
 
-	excel.AddValue(Coordinates{column: 1, row: row}, p.number, false)
-	excel.AddValue(Coordinates{column: 2, row: row}, p.revenue, false)
-	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable, false)
-	excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts, false)
-	excel.AddValue(Coordinates{column: 8, row: row}, p.db1, false)
+	excel.AddValue(Coordinates{column: 1, row: row}, p.number, NoStyle())
+	excel.AddValue(Coordinates{column: 2, row: row}, p.revenue, EuroStyle())
+	excel.AddValue(Coordinates{column: 3, row: row}, p.externalCostsChargeable, EuroStyle())
+	excel.AddValue(Coordinates{column: 4, row: row}, p.externalCosts, EuroStyle())
+	excel.AddValue(Coordinates{column: 8, row: row}, p.db1, EuroStyle())
 
 	var sumER float32
 
 	for i, fibu := range p.fibu {
 		sumER = sumER + p.invoice[i]
-		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i], false)
-		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, fibu, true)
-		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i], false)
+		excel.AddValue(Coordinates{column: 5, row: row + i + 1}, p.invoice[i], EuroStyle())
+		excel.AddValue(Coordinates{column: 6, row: row + i + 1}, fibu, DateStyle())
+		excel.AddValue(Coordinates{column: 7, row: row + i + 1}, p.paginiernr[i], IntegerStyle())
 	}
 
 	resultRow := row + len(p.fibu) + 1
 
-	excel.AddStyle([]Coordinates{
-		Coordinates{column: 2, row: resultRow},
-		Coordinates{column: 8, row: resultRow},
-	}, BorderTop)
-
-	excel.AddStyle([]Coordinates{
-		Coordinates{column: 2, row: row},
-		Coordinates{column: 2, row: resultRow - 1},
-	}, BorderLeftRight)
-
-	excel.AddStyle([]Coordinates{
-		Coordinates{column: 4, row: row},
-		Coordinates{column: 4, row: resultRow - 1},
-	}, BorderRight)
-
-	excel.AddStyle([]Coordinates{
-		Coordinates{column: 7, row: row},
-		Coordinates{column: 7, row: resultRow - 1},
-	}, BorderRight)
-
-	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue, false)
+	excel.AddValue(Coordinates{column: 2, row: resultRow}, p.revenue, tbeStyle)
 	resultsMap["totalRevenues"] += p.revenue
-	excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable, false)
+	excel.AddValue(Coordinates{column: 3, row: resultRow}, p.externalCostsChargeable, tbeStyle)
 	resultsMap["totalExtCostChargeable"] += p.externalCostsChargeable
-	excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts, false)
+	excel.AddValue(Coordinates{column: 4, row: resultRow}, p.externalCosts, tbeStyle)
 	resultsMap["totalExtCost"] += p.externalCosts
-	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER, false)
+	excel.AddValue(Coordinates{column: 5, row: resultRow}, sumER, tbeStyle)
 	resultsMap["totalER"] += sumER
 	excel.AddCondition(Coordinates{column: 5, row: resultRow}, p.externalCostsChargeable+p.externalCosts)
-	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1, false)
+	excel.AddValue(Coordinates{column: 8, row: resultRow}, p.db1, tbeStyle)
 	resultsMap["db1"] += p.db1
+
+	excel.AddValue(Coordinates{column: 6, row: resultRow}, " ", Style{Border: Top, Format: NoFormat})
+	excel.AddValue(Coordinates{column: 7, row: resultRow}, " ", Style{Border: Top, Format: NoFormat})
 
 	excel.AddEmptyRow(resultRow + 1)
 

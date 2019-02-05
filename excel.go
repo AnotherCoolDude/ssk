@@ -9,21 +9,26 @@ import (
 )
 
 const (
-	// BorderTop adds a border to the top of the cell
-	BorderTop StyleType = 0
-	// BorderLeftRight adds a border to the left and right of the cell
-	BorderLeftRight StyleType = 1
-	// BorderLeft adds a border to the left of the cell
-	BorderLeft StyleType = 2
-	// BorderRight adds a border to the right of the cell
-	BorderRight StyleType = 3
 
-	Top       BorderID = 0
-	Left      BorderID = 1
-	Right     BorderID = 2
-	LeftRight BorderID = 3
+	// NoBorder leaves the cell without border
+	NoBorder BorderID = 0
+	// Top adds a top border to the cell
+	Top BorderID = 1
+	// Left adds a left border to the cell
+	Left BorderID = 2
+	// Right adds a right border to the cell
+	Right BorderID = 3
+	// LeftRight adds a left and right border to the cell
+	LeftRight BorderID = 4
 
-	Date FormatID = 0
+	// NoFormat leaves the cell without format
+	NoFormat FormatID = 0
+	// Date formates the value of the cell to a date
+	Date FormatID = 1
+	// Euro formates the value of the cell to euro
+	Euro FormatID = 2
+	// Integer formates the value of the cell to integer
+	Integer FormatID = 3
 )
 
 // Excel wraps the excelize package
@@ -41,10 +46,6 @@ func ExcelFile(path string, sheetname string) *Excel {
 		sheetIndex := eFile.GetActiveSheetIndex()
 		oldName := eFile.GetSheetName(sheetIndex)
 		eFile.SetSheetName(oldName, sheetname)
-		// return &Excel{
-		// 	File:            eFile,
-		// 	ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
-		// }
 	} else {
 		eFile, err = excelize.OpenFile(path)
 		if err != nil {
@@ -68,42 +69,18 @@ func (excel *Excel) Save(path string) {
 }
 
 // AddValue adds a value to the provided coordinates
-func (excel *Excel) AddValue(coords Coordinates, value interface{}, date bool) {
-	//excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
-	var style int
-	var err error
-
-	fmt.Printf("current cell style %d\n", excel.File.GetCellStyle(excel.ActiveSheetName, coords.ToString()))
-
-	switch value.(type) {
-	case float32:
-		excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
-		style, err = excel.File.NewStyle(`{"number_format": 2}`)
-		fmt.Printf("setting %s to float32 with style %d\n", coords.ToString(), style)
-		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), style)
-	case int:
-		excel.File.SetCellInt(excel.ActiveSheetName, coords.ToString(), value.(int))
-		if date {
-			style, err = excel.File.NewStyle(`{"number_format": 17}`)
-		}
-		fmt.Printf("setting %s to int with style %d\n", coords.ToString(), style)
-		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), style)
-	default:
-		excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
+func (excel *Excel) AddValue(coords Coordinates, value interface{}, style Style) {
+	excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
+	styleString := style.toString()
+	if styleString == "" {
+		return
 	}
-	fmt.Printf("new cell style %d\n", excel.File.GetCellStyle(excel.ActiveSheetName, coords.ToString()))
+	st, err := excel.File.NewStyle(styleString)
 	if err != nil {
-		fmt.Printf("couldn't create style for coords %s\n", coords.ToString())
-	}
-}
-
-// AddStyle adds a Style to the range of the provided coordinates
-func (excel *Excel) AddStyle(coordsRange []Coordinates, styleType StyleType) {
-	style, err := excel.File.NewStyle(styleType.toString())
-	if err != nil {
+		fmt.Println(styleString)
 		fmt.Println(err)
 	}
-	excel.File.SetCellStyle(excel.ActiveSheetName, coordsRange[0].ToString(), coordsRange[1].ToString(), style)
+	excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), st)
 }
 
 // AddEmptyRow adds an empty row at index row
@@ -131,9 +108,6 @@ func (excel *Excel) FreezeHeader() {
 	excel.File.SetPanes(excel.ActiveSheetName, `{"freeze":true,"split":false,"x_split":0,"y_split":1,"top_left_cell":"A34","active_pane":"bottomLeft"}`)
 }
 
-// StyleType defines the types a cell can be styled with
-type StyleType int
-
 // Style represents the style of a cell
 type Style struct {
 	Border BorderID
@@ -147,44 +121,71 @@ type BorderID int
 type FormatID int
 
 func (s Style) toString() string {
-	st := "{"
-	switch s.Border {
-	case Top:
-		st += `"border":[{"type":"top","color":"000000","style":1}]`
-	case Left:
-		st += `"border":[{"type":"left","color":"000000","style":1}]`
-	case Right:
-		st += `"border":[{"type":"right","color":"000000","style":1}]`
-	case LeftRight:
-		st += `"border":[{"type":"left","color":"000000","style":1}, {"type":"right","color":"000000","style":1}]`
+	st := ""
+
+	if s.Border == NoBorder && s.Format == NoFormat {
+		return st
 	}
-	if s.Border != 0 && s.Format != 0 {
-		st += ","
+
+	switch s.Border {
+	case NoBorder:
+		st += `{`
+	case Top:
+		st += `{"border":[{"type":"top","color":"000000","style":1}]`
+	case Left:
+		st += `{"border":[{"type":"left","color":"000000","style":1}]`
+	case Right:
+		st += `{"border":[{"type":"right","color":"000000","style":1}]`
+	case LeftRight:
+		st += `{"border":[{"type":"left","color":"000000","style":1}, {"type":"right","color":"000000","style":1}]`
+	}
+
+	if s.Border != NoBorder && s.Format != NoFormat {
+		st += `,`
 	}
 
 	switch s.Format {
+	case NoFormat:
+		st += `}`
 	case Date:
-		st += `"number_format": 17`
+		st += `"number_format": 17}`
+	case Integer:
+		st += `"number_format": 2}`
+	case Euro:
+		st += `"currency_format": 218}`
 	}
-
-	st += "}"
-	fmt.Println(st)
 	return st
 }
 
-func (st StyleType) toString() string {
-	switch st {
-	case BorderTop:
-		return fmt.Sprintf(`{"border":[{"type":"top","color":"000000","style":1}]}`)
-	case BorderLeftRight:
-		return fmt.Sprintf(`{"border":[{"type":"left","color":"000000","style":1}, {"type":"right","color":"000000","style":1}]}`)
-	case BorderLeft:
-		return fmt.Sprintf(`{"border":[{"type":"left","color":"000000","style":1}]}`)
-	case BorderRight:
-		return fmt.Sprintf(`{"border":[{"type":"right","color":"000000","style":1}]}`)
-	default:
-		fmt.Println("unknown Style used...")
-		return ""
+// DateStyle returns a Style struct that sets the cell to a date
+func DateStyle() Style {
+	return Style{
+		Border: NoBorder,
+		Format: Date,
+	}
+}
+
+// EuroStyle returns a Style struct, that sets the cell to euro
+func EuroStyle() Style {
+	return Style{
+		Border: NoBorder,
+		Format: Euro,
+	}
+}
+
+// NoStyle returns a Style struct, that doesn't modify the cell
+func NoStyle() Style {
+	return Style{
+		Border: NoBorder,
+		Format: NoFormat,
+	}
+}
+
+// IntegerStyle returns a Style struct, that sets the cell to a integer
+func IntegerStyle() Style {
+	return Style{
+		Border: NoBorder,
+		Format: Integer,
 	}
 }
 
