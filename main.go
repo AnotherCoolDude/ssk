@@ -67,7 +67,7 @@ func main() {
 	}
 	destExcel.FirstSheet().Add(&smy)
 
-	destExcel.FreezeHeader()
+	destExcel.FirstSheet().FreezeHeader()
 
 	destExcel.Save(resultPath)
 }
@@ -84,7 +84,7 @@ func (s *summary) Columns() []string {
 	return []string{}
 }
 
-func (s *summary) Insert() {
+func (s *summary) Insert(sh *Sheet) {
 
 	tbStyle := Style{Border: Top, Format: Euro}
 	topBorderCell := Cell{" ", Style{Border: Top, Format: NoFormat}}
@@ -100,8 +100,8 @@ func (s *summary) Insert() {
 		7: topBorderCell,
 		8: Cell{smy.tDB1, tbStyle},
 	}
-	excel.AddEmpty()
-	excel.AddRow(totalCells)
+	sh.AddEmptyRow()
+	sh.AddRow(totalCells)
 }
 
 // Project defines the necessary fields for the result xlsx
@@ -137,7 +137,6 @@ func (p *Project) Columns() []string {
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(sh *Sheet) {
-	// row := excel.NextRow()
 
 	currentPrefix := jobnrPrefix(p.number)
 	lastPrefix := jobnrPrefix(lastProject.number)
@@ -146,7 +145,7 @@ func (p *Project) Insert(sh *Sheet) {
 	topBorderCell := Cell{" ", Style{Border: Top, Format: NoFormat}}
 	// check if current project is a new customer
 	if currentPrefix != lastPrefix && lastPrefix != "" {
-		excel.AddEmpty()
+		sh.AddEmptyRow()
 		tbnfStyle := Style{Border: Top, Format: NoFormat}
 
 		customerSumCells := map[int]Cell{
@@ -160,9 +159,9 @@ func (p *Project) Insert(sh *Sheet) {
 			7: topBorderCell,
 			8: Cell{resultsMap["db1"], tbeStyle},
 		}
-		excel.AddRow(customerSumCells)
-		excel.AddEmpty()
-		excel.AddEmpty()
+		sh.AddRow(customerSumCells)
+		sh.AddEmptyRow()
+		sh.AddEmptyRow()
 
 		smy.tAR += resultsMap["totalRevenues"]
 		smy.tWB += resultsMap["totalExtCostChargeable"]
@@ -179,7 +178,7 @@ func (p *Project) Insert(sh *Sheet) {
 		4: Cell{p.externalCosts, EuroStyle()},
 		8: Cell{p.db1, EuroStyle()},
 	}
-	excel.AddRow(projectCells)
+	sh.AddRow(projectCells)
 
 	var sumER float32
 
@@ -190,7 +189,7 @@ func (p *Project) Insert(sh *Sheet) {
 			7: Cell{p.paginiernr[i], IntegerStyle()},
 		}
 		sumER = sumER + p.invoice[i]
-		excel.AddRow(erCells)
+		sh.AddRow(erCells)
 	}
 
 	projectResultCells := map[int]Cell{
@@ -202,8 +201,8 @@ func (p *Project) Insert(sh *Sheet) {
 		7: topBorderCell,
 		8: Cell{p.db1, tbeStyle},
 	}
-	excel.AddRow(projectResultCells)
-	excel.AddEmpty()
+	sh.AddRow(projectResultCells)
+	sh.AddEmptyRow()
 
 	resultsMap["totalRevenues"] += p.revenue
 	resultsMap["totalExtCostChargeable"] += p.externalCostsChargeable
