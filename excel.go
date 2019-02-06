@@ -31,32 +31,45 @@ const (
 	Integer FormatID = 3
 )
 
+// Sheets represents sheets in an excel file
+type Sheets map[string]Sheet
+
+// Sheet represents a sheet in an excel file
+type Sheet *excelize.File
+
 // Excel wraps the excelize package
 type Excel struct {
 	File            *excelize.File
+	Sheets          Sheets
 	ActiveSheetName string
 }
 
-type Exceler interface {
-}
+func (excel *Excel) Sheet(name string)
 
 // ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
 func ExcelFile(path string, sheetname string) *Excel {
 	var eFile *excelize.File
+	var sheets Sheets
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Println("file not existing, creating new...")
 		eFile = excelize.NewFile()
 		sheetIndex := eFile.GetActiveSheetIndex()
 		oldName := eFile.GetSheetName(sheetIndex)
 		eFile.SetSheetName(oldName, sheetname)
+		sheets[sheetname] = eFile
 	} else {
 		eFile, err = excelize.OpenFile(path)
+		sheetMap := eFile.GetSheetMap()
+		for _, name := range sheetMap {
+			sheets[name] = eFile
+		}
 		if err != nil {
 			fmt.Printf("couldn't open file at path\n%s\nerr: %s", path, err)
 		}
 	}
 	return &Excel{
 		File:            eFile,
+		Sheets:          sheets,
 		ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
 	}
 }
@@ -86,13 +99,8 @@ func (excel *Excel) AddValue(coords Coordinates, value interface{}, style Style)
 	excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), st)
 }
 
-// AddEmptyRow adds an empty row at index row
-func (excel *Excel) AddEmptyRow(row int) {
-	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: row}.ToString(), " ")
-}
-
 // AddEmpty adds an empty row at index row
-func (excel *Excel) AddEmpty() {
+func (sheet Sheet) AddEmptyRow() {
 	freeRow := excel.NextRow()
 	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: freeRow}.ToString(), " ")
 }
