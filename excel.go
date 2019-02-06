@@ -31,98 +31,116 @@ const (
 	Integer FormatID = 3
 )
 
-// Sheets represents sheets in an excel file
-type Sheets map[string]Sheet
-
-// Sheet represents a sheet in an excel file
-type Sheet *excelize.File
+// Sheet wraps the sheets of a excel file into a struct
+type Sheet struct {
+	file *excelize.File
+	name string
+}
 
 // Excel wraps the excelize package
 type Excel struct {
-	File            *excelize.File
-	Sheets          Sheets
+	file            *excelize.File
+	sheets          *[]Sheet
 	ActiveSheetName string
 }
 
-func (excel *Excel) Sheet(name string)
+// Sheet retruns the sheet by name or creates a new one
+func (excel *Excel) Sheet(name string) *Sheet {
+	// Sheet exists
+	for _, existingSheet := range *excel.sheets {
+		if existingSheet.name == name {
+			return &existingSheet
+		}
+	}
 
-// ExcelFile opens/creates a Excel File. If newly created, names the first sheet after sheetname
+	newSheet := Sheet{file: excel.file, name: name}
+	excel.file.NewSheet(name)
+	return &newSheet
+}
+
+// FirstSheet returns the first sheet found in the excel file
+func (excel *Excel) FirstSheet() *Sheet {
+	shs := excel.sheets
+	return &(*shs)[0]
+}
+
+// ExcelFile opens/creates a Excel file. If newly created, names the first sheet after sheetname
 func ExcelFile(path string, sheetname string) *Excel {
 	var eFile *excelize.File
-	var sheets Sheets
+	var sheets []Sheet
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Println("file not existing, creating new...")
 		eFile = excelize.NewFile()
 		sheetIndex := eFile.GetActiveSheetIndex()
 		oldName := eFile.GetSheetName(sheetIndex)
 		eFile.SetSheetName(oldName, sheetname)
-		sheets[sheetname] = eFile
+		sheets = append(sheets, Sheet{file: eFile, name: sheetname})
 	} else {
 		eFile, err = excelize.OpenFile(path)
 		sheetMap := eFile.GetSheetMap()
 		for _, name := range sheetMap {
-			sheets[name] = eFile
+			sheets = append(sheets, Sheet{file: eFile, name: name})
 		}
 		if err != nil {
 			fmt.Printf("couldn't open file at path\n%s\nerr: %s", path, err)
 		}
 	}
 	return &Excel{
-		File:            eFile,
-		Sheets:          sheets,
+		file:            eFile,
+		sheets:          &sheets,
 		ActiveSheetName: eFile.GetSheetName(eFile.GetActiveSheetIndex()),
 	}
 }
 
 // NextRow returns the next free Row
 func (excel *Excel) NextRow() int {
-	return len(excel.File.GetRows(excel.ActiveSheetName)) + 1
+	return len(excel.file.GetRows(excel.ActiveSheetName)) + 1
 }
 
 // Save saves the Excelfile to the provided path
 func (excel *Excel) Save(path string) {
-	excel.File.SaveAs(path)
+	excel.file.SaveAs(path)
 }
 
 // AddValue adds a value to the provided coordinates
 func (excel *Excel) AddValue(coords Coordinates, value interface{}, style Style) {
-	excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
+	excel.file.SetCellValue(excel.ActiveSheetName, coords.ToString(), value)
 	styleString := style.toString()
 	if styleString == "" {
 		return
 	}
-	st, err := excel.File.NewStyle(styleString)
+	st, err := excel.file.NewStyle(styleString)
 	if err != nil {
 		fmt.Println(styleString)
 		fmt.Println(err)
 	}
-	excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), st)
+	excel.file.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), st)
 }
 
-// AddEmpty adds an empty row at index row
-func (sheet Sheet) AddEmptyRow() {
+// AddEmptyRow adds an empty row at index row
+func (excel *Excel) AddEmptyRow() {
 	freeRow := excel.NextRow()
-	excel.File.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: freeRow}.ToString(), " ")
+	excel.file.SetCellStr(excel.ActiveSheetName, Coordinates{column: 0, row: freeRow}.ToString(), " ")
 }
 
 // AddCondition adds a condition, that fills the cell red if its value is less than comparison
 func (excel *Excel) AddCondition(coord Coordinates, comparison float32) {
 	compString := fmt.Sprintf("%f", comparison)
-	format, err := excel.File.NewConditionalStyle(`{"fill":{"type":"pattern","color":["#F44E42"],"pattern":1}}`)
+	format, err := excel.file.NewConditionalStyle(`{"fill":{"type":"pattern","color":["#F44E42"],"pattern":1}}`)
 	if err != nil {
 		fmt.Printf("couldn't create conditional style: %s\n", err)
 	}
-	excel.File.SetConditionalFormat(excel.ActiveSheetName, coord.ToString(), fmt.Sprintf(`[{"type":"cell","criteria":"<","format":%d,"value":%s}]`, format, compString))
+	excel.file.SetConditionalFormat(excel.ActiveSheetName, coord.ToString(), fmt.Sprintf(`[{"type":"cell","criteria":"<","format":%d,"value":%s}]`, format, compString))
 }
 
 // GetValue returns the Value from the cell at coord
 func (excel *Excel) GetValue(coord Coordinates) string {
-	return excel.File.GetCellValue(excel.ActiveSheetName, coord.ToString())
+	return excel.file.GetCellValue(excel.ActiveSheetName, coord.ToString())
 }
 
 // FreezeHeader freezes the headerrow
 func (excel *Excel) FreezeHeader() {
-	excel.File.SetPanes(excel.ActiveSheetName, `{"freeze":true,"split":false,"x_split":0,"y_split":1,"top_left_cell":"A34","active_pane":"bottomLeft"}`)
+	excel.file.SetPanes(excel.ActiveSheetName, `{"freeze":true,"split":false,"x_split":0,"y_split":1,"top_left_cell":"A34","active_pane":"bottomLeft"}`)
 }
 
 // Style represents the style of a cell
@@ -209,7 +227,7 @@ func IntegerStyle() Style {
 // Insertable defines Methods for structs to be insertable in a excelfile
 type Insertable interface {
 	Columns() []string
-	Insert(excel *Excel)
+	Insert(sh *Sheet)
 }
 
 // Coordinates wraps coordinates in a struct
@@ -226,15 +244,15 @@ func (c Coordinates) ToString() string {
 }
 
 // PrintHeader prints a table that contains the header of each sheet and it's index
-func PrintHeader(excel *Excel, startingRow int) {
-	if excel.isEmpty() {
+func PrintHeader(sh *Sheet, startingRow int) {
+	if sh.isEmpty() {
 		return
 	}
-	sheetMap := excel.File.GetSheetMap()
+	sheetMap := sh.file.GetSheetMap()
 	for k, v := range sheetMap {
 		headerTableData := [][]string{}
 		headerTableData = append(headerTableData, []string{strconv.Itoa(k), v})
-		rows := excel.File.GetRows(v)
+		rows := sh.file.GetRows(v)
 		for index, head := range rows[startingRow] {
 			headerTableData = append(headerTableData, []string{fmt.Sprintf("%s%d", excelize.ToAlphaString(index), startingRow+1), head})
 		}
@@ -246,12 +264,12 @@ func PrintHeader(excel *Excel, startingRow int) {
 }
 
 // FilterByHeader filters the excel file by its headertitle
-func (excel *Excel) FilterByHeader(header []string) [][]string {
-	if excel.isEmpty() {
+func (sh *Sheet) FilterByHeader(header []string) [][]string {
+	if sh.isEmpty() {
 		return nil
 	}
 
-	data := excel.File.GetRows(excel.ActiveSheetName)
+	data := sh.file.GetRows(sh.name)
 	m := map[string]int{}
 
 	for i, col := range data[0] {
@@ -263,15 +281,15 @@ func (excel *Excel) FilterByHeader(header []string) [][]string {
 	for _, h := range header {
 		sortedColumns = append(sortedColumns, excelize.ToAlphaString(m[h]))
 	}
-	return excel.FilterByColumn(sortedColumns)
+	return sh.FilterByColumn(sortedColumns)
 }
 
 // FilterByColumn filters the excel file by its column
-func (excel *Excel) FilterByColumn(columns []string) [][]string {
-	if excel.isEmpty() {
+func (sh *Sheet) FilterByColumn(columns []string) [][]string {
+	if sh.isEmpty() {
 		return nil
 	}
-	data := excel.File.GetRows(excel.ActiveSheetName)
+	data := sh.file.GetRows(sh.name)
 	filteredData := [][]string{}
 
 	for _, row := range data {
@@ -302,32 +320,32 @@ func (excel *Excel) AddRow(columnCellMap map[int]Cell) {
 	freeRow := excel.NextRow()
 	for col, cell := range columnCellMap {
 		coords := Coordinates{column: col, row: freeRow}
-		excel.File.SetCellValue(excel.ActiveSheetName, coords.ToString(), cell.value)
+		excel.file.SetCellValue(excel.ActiveSheetName, coords.ToString(), cell.value)
 		styleString := cell.style.toString()
 		if styleString == "" {
 			continue
 		}
-		st, err := excel.File.NewStyle(styleString)
+		st, err := excel.file.NewStyle(styleString)
 		if err != nil {
 			fmt.Println(styleString)
 			fmt.Println(err)
 		}
-		excel.File.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), st)
+		excel.file.SetCellStyle(excel.ActiveSheetName, coords.ToString(), coords.ToString(), st)
 	}
 }
 
 // Add inserts a insertable struct into a given file.
-func (excel *Excel) Add(data Insertable) {
-	if excel.isEmpty() {
+func (sh *Sheet) Add(data Insertable) {
+	if sh.isEmpty() {
 		fmt.Println("file is empty, adding header")
 		headerCoords := Coordinates{row: 0, column: 0}
 		for _, col := range data.Columns() {
 			fmt.Printf("writing header %s at %s\n", col, headerCoords.ToString())
-			excel.File.SetCellStr(excel.ActiveSheetName, headerCoords.ToString(), col)
+			sh.file.SetCellStr(sh.name, headerCoords.ToString(), col)
 			headerCoords.column = headerCoords.column + 1
 		}
 	}
-	data.Insert(excel)
+	data.Insert(sh)
 }
 
 func contains(slice []string, value string) bool {
@@ -339,8 +357,8 @@ func contains(slice []string, value string) bool {
 	return false
 }
 
-func (excel *Excel) isEmpty() bool {
-	if len(excel.File.GetRows(excel.ActiveSheetName)) == 0 {
+func (sh *Sheet) isEmpty() bool {
+	if len(sh.file.GetRows(sh.name)) == 0 {
 		return true
 	}
 	return false

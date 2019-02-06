@@ -31,7 +31,7 @@ func main() {
 	resultsMap = make(map[string]float32)
 	smy = summary{}
 
-	rentData := rentExcel.FilterByColumn(rentColumns)
+	rentData := rentExcel.FirstSheet().FilterByColumn(rentColumns)
 	projects := []Project{}
 	for _, row := range rentData {
 		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
@@ -49,7 +49,7 @@ func main() {
 		})
 	}
 
-	erData := erExcel.FilterByHeader(erHeader)
+	erData := erExcel.FirstSheet().FilterByHeader(erHeader)
 
 	for _, row := range erData {
 
@@ -63,9 +63,9 @@ func main() {
 	}
 
 	for _, p := range projects {
-		destExcel.Add(&p)
+		destExcel.FirstSheet().Add(&p)
 	}
-	destExcel.Add(&smy)
+	destExcel.FirstSheet().Add(&smy)
 
 	destExcel.FreezeHeader()
 
@@ -84,7 +84,7 @@ func (s *summary) Columns() []string {
 	return []string{}
 }
 
-func (s *summary) Insert(excel *Excel) {
+func (s *summary) Insert() {
 
 	tbStyle := Style{Border: Top, Format: Euro}
 	topBorderCell := Cell{" ", Style{Border: Top, Format: NoFormat}}
@@ -136,7 +136,7 @@ func (p *Project) Columns() []string {
 // 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Pagnr 8=Umsatz vor El
 
 // Insert inserts values from struct Project
-func (p *Project) Insert(excel *Excel) {
+func (p *Project) Insert(sh *Sheet) {
 	// row := excel.NextRow()
 
 	currentPrefix := jobnrPrefix(p.number)
