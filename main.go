@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AnotherCoolDude/excel"
 	. "github.com/AnotherCoolDude/excel"
 )
 
@@ -26,9 +27,9 @@ var (
 )
 
 func main() {
-	destExcel = ExcelFile(resultPath, "2018")
-	rentExcel = ExcelFile(rentabilität, "")
-	erExcel = ExcelFile(eingangsrechnungen, "")
+	destExcel = File(resultPath, "2018")
+	rentExcel = File(rentabilität, "")
+	erExcel = File(eingangsrechnungen, "")
 
 	resultsMap = make(map[string]float32)
 	smy = summary{}
@@ -86,21 +87,21 @@ func (s *summary) Columns() []string {
 	return []string{}
 }
 
-func (s *summary) Insert(sh *Sheet) {
+func (s *summary) Insert(sh *excel.Sheet) {
 
-	tbStyle := Style{Border: Top, Format: Euro}
-	topBorderCell := Cell{Value: " ", Style{Border: Top, Format: NoFormat}}
+	tbStyle := excel.Style{Border: Top, Format: Euro}
+	topBorderCell := Cell{Value: " ", Style: Style{Border: Top, Format: NoFormat}}
 
-	totalCells := map[int]Cell{
-		0: Cell{"Gesamt", tbStyle},
+	totalCells := map[int]excel.Cell{
+		0: Cell{Value: "Gesamt", Style: tbStyle},
 		1: topBorderCell,
-		2: Cell{smy.tAR, tbStyle},
-		3: Cell{smy.tWB, tbStyle},
-		4: Cell{smy.tNWB, tbStyle},
-		5: Cell{smy.tER, tbStyle},
+		2: Cell{Value: smy.tAR, Style: tbStyle},
+		3: Cell{Value: smy.tWB, Style: tbStyle},
+		4: Cell{Value: smy.tNWB, Style: tbStyle},
+		5: Cell{Value: smy.tER, Style: tbStyle},
 		6: topBorderCell,
 		7: topBorderCell,
-		8: Cell{smy.tDB1, tbStyle},
+		8: Cell{Value: smy.tDB1, Style: tbStyle},
 	}
 	sh.AddEmptyRow()
 	sh.AddRow(totalCells)
@@ -138,28 +139,28 @@ func (p *Project) Columns() []string {
 // 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Pagnr 8=Umsatz vor El
 
 // Insert inserts values from struct Project
-func (p *Project) Insert(sh *Sheet) {
+func (p *Project) Insert(sh *excel.Sheet) {
 
 	currentPrefix := jobnrPrefix(p.number)
 	lastPrefix := jobnrPrefix(lastProject.number)
 
 	tbeStyle := Style{Border: Top, Format: Euro}
-	topBorderCell := Cell{" ", Style{Border: Top, Format: NoFormat}}
+	topBorderCell := Cell{Value: " ", Style: Style{Border: Top, Format: NoFormat}}
 	// check if current project is a new customer
 	if currentPrefix != lastPrefix && lastPrefix != "" {
 		sh.AddEmptyRow()
 		tbnfStyle := Style{Border: Top, Format: NoFormat}
 
 		customerSumCells := map[int]Cell{
-			0: Cell{lastProject.customer, tbnfStyle},
+			0: Cell{Value: lastProject.customer, Style: tbnfStyle},
 			1: topBorderCell,
-			2: Cell{resultsMap["totalRevenues"], tbeStyle},
-			3: Cell{resultsMap["totalExtCostChargeable"], tbeStyle},
-			4: Cell{resultsMap["totalExtCost"], tbeStyle},
-			5: Cell{resultsMap["totalER"], tbeStyle},
+			2: Cell{Value: resultsMap["totalRevenues"], Style: tbeStyle},
+			3: Cell{Value: resultsMap["totalExtCostChargeable"], Style: tbeStyle},
+			4: Cell{Value: resultsMap["totalExtCost"], Style: tbeStyle},
+			5: Cell{Value: resultsMap["totalER"], Style: tbeStyle},
 			6: topBorderCell,
 			7: topBorderCell,
-			8: Cell{resultsMap["db1"], tbeStyle},
+			8: Cell{Value: resultsMap["db1"], Style: tbeStyle},
 		}
 		sh.AddRow(customerSumCells)
 		sh.AddEmptyRow()
@@ -174,11 +175,11 @@ func (p *Project) Insert(sh *Sheet) {
 	}
 
 	projectCells := map[int]Cell{
-		1: Cell{p.number, NoStyle()},
-		2: Cell{p.revenue, EuroStyle()},
-		3: Cell{p.externalCostsChargeable, EuroStyle()},
-		4: Cell{p.externalCosts, EuroStyle()},
-		8: Cell{p.db1, EuroStyle()},
+		1: Cell{Value: p.number, Style: NoStyle()},
+		2: Cell{Value: p.revenue, Style: EuroStyle()},
+		3: Cell{Value: p.externalCostsChargeable, Style: EuroStyle()},
+		4: Cell{Value: p.externalCosts, Style: EuroStyle()},
+		8: Cell{Value: p.db1, Style: EuroStyle()},
 	}
 	sh.AddRow(projectCells)
 
@@ -186,22 +187,22 @@ func (p *Project) Insert(sh *Sheet) {
 
 	for i, fibu := range p.fibu {
 		erCells := map[int]Cell{
-			5: Cell{p.invoice[i], EuroStyle()},
-			6: Cell{fibu, DateStyle()},
-			7: Cell{p.paginiernr[i], IntegerStyle()},
+			5: Cell{Value: p.invoice[i], Style: EuroStyle()},
+			6: Cell{Value: fibu, Style: DateStyle()},
+			7: Cell{Value: p.paginiernr[i], Style: IntegerStyle()},
 		}
 		sumER = sumER + p.invoice[i]
 		sh.AddRow(erCells)
 	}
 
 	projectResultCells := map[int]Cell{
-		2: Cell{p.revenue, tbeStyle},
-		3: Cell{p.externalCostsChargeable, tbeStyle},
-		4: Cell{p.externalCosts, tbeStyle},
-		5: Cell{sumER, tbeStyle},
+		2: Cell{Value: p.revenue, Style: tbeStyle},
+		3: Cell{Value: p.externalCostsChargeable, Style: tbeStyle},
+		4: Cell{Value: p.externalCosts, Style: tbeStyle},
+		5: Cell{Value: sumER, Style: tbeStyle},
 		6: topBorderCell,
 		7: topBorderCell,
-		8: Cell{p.db1, tbeStyle},
+		8: Cell{Value: p.db1, Style: tbeStyle},
 	}
 	sh.AddRow(projectResultCells)
 	sh.AddEmptyRow()
