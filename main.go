@@ -3,6 +3,8 @@ package main
 import (
 	"strconv"
 	"strings"
+
+	. "github.com/AnotherCoolDude/excel"
 )
 
 const (
@@ -87,7 +89,7 @@ func (s *summary) Columns() []string {
 func (s *summary) Insert(sh *Sheet) {
 
 	tbStyle := Style{Border: Top, Format: Euro}
-	topBorderCell := Cell{" ", Style{Border: Top, Format: NoFormat}}
+	topBorderCell := Cell{Value: " ", Style{Border: Top, Format: NoFormat}}
 
 	totalCells := map[int]Cell{
 		0: Cell{"Gesamt", tbStyle},
