@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	rentabilität       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
-	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_nov17-jan19.xlsx"
-	resultPath         = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
+	rentabilität       = "/Users/christianhovenbitzer/Desktop/fk_jan19/rent_jan19.xlsx"
+	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fk_jan19/er_okt18-feb19.xlsx"
+	resultPath         = "/Users/christianhovenbitzer/Desktop/fk_jan19/result_jan19.xlsx"
 )
 
 var (
 	rentColumns = []string{"A", "C", "E", "G", "I", "L", "E"}
 	erColumns   = []string{"A", "F", "G", "K"}
-	erHeader    = []string{"Paginiernummer", "FiBu-Zeitraum", "Projektnummern", "Netto (Dokument)"}
+	erHeader    = []string{"Paginiernummer", "Rechnungsnummer", "FiBu-Zeitraum", "Projektnummern", "Netto (Dokument)"}
 	rentExcel   *Excel
 	erExcel     *Excel
 	destExcel   *Excel
@@ -53,6 +53,7 @@ func main() {
 			invoice:                 []float32{},
 			fibu:                    []int{},
 			paginiernr:              []string{},
+			invoiceNr:               []string{},
 			income:                  mustParseFloat(row[5]),
 			revenue:                 mustParseFloat(row[2]),
 			db1:                     mustParseFloat(row[2]) - fk,
@@ -64,10 +65,11 @@ func main() {
 	for _, row := range erData {
 
 		for i, p := range projects {
-			if row[2] == p.number {
+			if row[3] == p.number {
 				projects[i].paginiernr = append(projects[i].paginiernr, row[0])
-				projects[i].fibu = append(projects[i].fibu, mustParseInt(row[1]))
-				projects[i].invoice = append(projects[i].invoice, mustParseFloat(row[3]))
+				projects[i].invoiceNr = append(projects[i].invoiceNr, row[1])
+				projects[i].fibu = append(projects[i].fibu, mustParseInt(row[2]))
+				projects[i].invoice = append(projects[i].invoice, mustParseFloat(row[4]))
 			}
 		}
 	}
@@ -170,6 +172,7 @@ type Project struct {
 	invoice                 []float32
 	fibu                    []int
 	paginiernr              []string
+	invoiceNr               []string
 	income                  float32
 	revenue                 float32
 	db1                     float32
@@ -185,12 +188,12 @@ func (p *Project) Columns() []string {
 		"FK nwb",
 		"ER Aufwendungen",
 		"ER FiBu",
-		"Paginiernr",
+		"Rechnungsnr",
 		"DB 1",
 	}
 }
 
-// 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Pagnr 8=Umsatz vor El
+// 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Rechnungsnr 8=Umsatz vor El
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(sh *excel.Sheet) {
@@ -212,7 +215,7 @@ func (p *Project) Insert(sh *excel.Sheet) {
 		erCells := map[int]Cell{
 			5: Cell{Value: p.invoice[i], Style: EuroStyle()},
 			6: Cell{Value: fibu, Style: DateStyle()},
-			7: Cell{Value: p.paginiernr[i], Style: IntegerStyle()},
+			7: Cell{Value: p.invoiceNr[i], Style: NoStyle()},
 		}
 		sumER = sumER + p.invoice[i]
 		sh.AddRow(erCells)
