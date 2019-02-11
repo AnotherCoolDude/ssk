@@ -21,9 +21,9 @@ var (
 	rentExcel   *Excel
 	erExcel     *Excel
 	destExcel   *Excel
-	resultsMap  map[string]float32
 	lastProject Project
 	smy         summary
+	customerSmy customerSummary
 )
 
 func main() {
@@ -31,12 +31,19 @@ func main() {
 	rentExcel = File(rentabilität, "")
 	erExcel = File(eingangsrechnungen, "")
 
-	resultsMap = make(map[string]float32)
 	smy = summary{}
+	customerSmy = customerSummary{}
 
 	rentData := rentExcel.FirstSheet().FilterByColumn(rentColumns)
-	projects := []Project{}
+	chargabeleProjects := [][]string{}
 	for _, row := range rentData {
+		if jobnrPrefix(row[1]) != "SEIN" {
+			chargabeleProjects = append(chargabeleProjects, row)
+		}
+	}
+
+	projects := []Project{}
+	for _, row := range chargabeleProjects {
 		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
 		projects = append(projects, Project{
 			customer:                row[0],
@@ -66,6 +73,11 @@ func main() {
 	}
 
 	for _, p := range projects {
+		currentPrefix := jobnrPrefix(p.number)
+		lastPrefix := jobnrPrefix(lastProject.number)
+		if currentPrefix != lastPrefix && lastPrefix != "" {
+			destExcel.FirstSheet().Add(&customerSmy)
+		}
 		destExcel.FirstSheet().Add(&p)
 	}
 	destExcel.FirstSheet().Add(&smy)
@@ -73,6 +85,48 @@ func main() {
 	destExcel.FirstSheet().FreezeHeader()
 
 	destExcel.Save(resultPath)
+}
+
+type customerSummary struct {
+	customer string
+	ar       float32
+	wb       float32
+	nwb      float32
+	er       float32
+	db1      float32
+}
+
+func (cs *customerSummary) Columns() []string {
+	return []string{}
+}
+
+func (cs *customerSummary) Insert(sh *excel.Sheet) {
+	tbnfStyle := Style{Border: Top, Format: NoFormat}
+	tbCell := Cell{Value: " ", Style: tbnfStyle}
+	tbeStyle := Style{Border: Top, Format: Euro}
+
+	customerSumCells := map[int]Cell{
+		0: Cell{Value: lastProject.customer, Style: tbnfStyle},
+		1: tbCell,
+		2: Cell{Value: cs.ar, Style: tbeStyle},
+		3: Cell{Value: cs.wb, Style: tbeStyle},
+		4: Cell{Value: cs.nwb, Style: tbeStyle},
+		5: Cell{Value: cs.er, Style: tbeStyle},
+		6: tbCell,
+		7: tbCell,
+		8: Cell{Value: cs.db1, Style: tbeStyle},
+	}
+	sh.AddRow(customerSumCells)
+	sh.AddEmptyRow()
+	sh.AddEmptyRow()
+
+	smy.tAR += cs.ar
+	smy.tWB += cs.wb
+	smy.tNWB += cs.nwb
+	smy.tER += cs.er
+	smy.tDB1 += cs.db1
+
+	customerSmy = customerSummary{}
 }
 
 type summary struct {
@@ -140,39 +194,8 @@ func (p *Project) Columns() []string {
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(sh *excel.Sheet) {
-
-	currentPrefix := jobnrPrefix(p.number)
-	lastPrefix := jobnrPrefix(lastProject.number)
-
 	tbeStyle := Style{Border: Top, Format: Euro}
 	topBorderCell := Cell{Value: " ", Style: Style{Border: Top, Format: NoFormat}}
-	// check if current project is a new customer
-	if currentPrefix != lastPrefix && lastPrefix != "" {
-		sh.AddEmptyRow()
-		tbnfStyle := Style{Border: Top, Format: NoFormat}
-
-		customerSumCells := map[int]Cell{
-			0: Cell{Value: lastProject.customer, Style: tbnfStyle},
-			1: topBorderCell,
-			2: Cell{Value: resultsMap["totalRevenues"], Style: tbeStyle},
-			3: Cell{Value: resultsMap["totalExtCostChargeable"], Style: tbeStyle},
-			4: Cell{Value: resultsMap["totalExtCost"], Style: tbeStyle},
-			5: Cell{Value: resultsMap["totalER"], Style: tbeStyle},
-			6: topBorderCell,
-			7: topBorderCell,
-			8: Cell{Value: resultsMap["db1"], Style: tbeStyle},
-		}
-		sh.AddRow(customerSumCells)
-		sh.AddEmptyRow()
-		sh.AddEmptyRow()
-
-		smy.tAR += resultsMap["totalRevenues"]
-		smy.tWB += resultsMap["totalExtCostChargeable"]
-		smy.tNWB += resultsMap["totalExtCost"]
-		smy.tER += resultsMap["totalER"]
-		smy.tDB1 += resultsMap["db1"]
-		resultsMap = make(map[string]float32)
-	}
 
 	projectCells := map[int]Cell{
 		1: Cell{Value: p.number, Style: NoStyle()},
@@ -207,11 +230,11 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	sh.AddRow(projectResultCells)
 	sh.AddEmptyRow()
 
-	resultsMap["totalRevenues"] += p.revenue
-	resultsMap["totalExtCostChargeable"] += p.externalCostsChargeable
-	resultsMap["totalExtCost"] += p.externalCosts
-	resultsMap["totalER"] += sumER
-	resultsMap["db1"] += p.db1
+	customerSmy.ar += p.revenue
+	customerSmy.wb += p.externalCostsChargeable
+	customerSmy.nwb += p.externalCosts
+	customerSmy.er += sumER
+	customerSmy.db1 += p.db1
 
 	lastProject = *p
 }
