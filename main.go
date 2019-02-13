@@ -73,7 +73,7 @@ func main() {
 		}
 		fmt.Printf("amount of items to remove: %d\n", len(reduced))
 	}
-	cleanedData := removeRows(chargabeleProjects, reduced)
+	cleanedData := removeRows(chargabeleProjects, reduced, false)
 
 	// create objects
 	projects := []Project{}
