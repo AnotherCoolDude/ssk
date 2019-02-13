@@ -1,26 +1,35 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AnotherCoolDude/excel"
 	. "github.com/AnotherCoolDude/excel"
 )
 
 const (
-	rentabilität       = "/Users/christianhovenbitzer/Desktop/fk_jan19/rent_jan19.xlsx"
-	eingangsrechnungen = "/Users/christianhovenbitzer/Desktop/fk_jan19/er_okt18-feb19.xlsx"
-	resultPath         = "/Users/christianhovenbitzer/Desktop/fk_jan19/result_jan19.xlsx"
+	rentabilität         = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
+	rentabilitätpr       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_pr_18.xlsx"
+	eingangsrechnungen   = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_17-19.xlsx"
+	eingangsrechnungenpr = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_pr_17-19.xlsx"
+	abgrenzung           = "/Users/christianhovenbitzer/Desktop/fremdkosten/01-2018.xlsx"
+	einbeziehen          = ""
+	resultPath           = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
 )
 
 var (
 	rentColumns = []string{"A", "C", "E", "G", "I", "L", "E"}
 	erColumns   = []string{"A", "F", "G", "K"}
-	erHeader    = []string{"Paginiernummer", "Rechnungsnummer", "FiBu-Zeitraum", "Projektnummern", "Netto (Dokument)"}
+	erHeader    = []string{"Paginiernummer", "Leistungsart", "FiBu Zeitraum", "Projekt Nr.", "Netto"}
 	rentExcel   *Excel
+	rentprExcel *Excel
 	erExcel     *Excel
+	erprExcel   *Excel
 	destExcel   *Excel
+	abgrExcel   *Excel
 	lastProject Project
 	smy         summary
 	customerSmy customerSummary
@@ -29,21 +38,46 @@ var (
 func main() {
 	destExcel = File(resultPath, "2018")
 	rentExcel = File(rentabilität, "")
+	rentprExcel = File(rentabilitätpr, "")
 	erExcel = File(eingangsrechnungen, "")
+	erprExcel = File(eingangsrechnungenpr, "")
+	abgrExcel = File(abgrenzung, "")
 
 	smy = summary{}
 	customerSmy = customerSummary{}
 
+	// all data from rent
 	rentData := rentExcel.FirstSheet().FilterByColumn(rentColumns)
+	rentprData := rentprExcel.FirstSheet().FilterByColumn(rentColumns)
+
+	// rent without SEIN Projects
 	chargabeleProjects := [][]string{}
 	for _, row := range rentData {
 		if jobnrPrefix(row[1]) != "SEIN" {
 			chargabeleProjects = append(chargabeleProjects, row)
 		}
 	}
+	chargabeleProjectsPR := [][]string{}
+	for _, row := range rentprData {
+		if jobnrPrefix(row[1]) != "SEPR" {
+			chargabeleProjectsPR = append(chargabeleProjectsPR, row)
+		}
+	}
 
+	// rent cleaned from abgrenzung
+	indicator := abgrExcel.FirstSheet().FilterByHeader([]string{"Projektnummern", "Bemerkung"})
+	reduced := []string{}
+	for _, item := range indicator {
+		if item[1] == "2017" {
+			reduced = append(reduced, item[0])
+		}
+		fmt.Printf("amount of items to remove: %d\n", len(reduced))
+	}
+	cleanedData := removeRows(chargabeleProjects, reduced)
+
+	// create objects
 	projects := []Project{}
-	for _, row := range chargabeleProjects {
+	for _, row := range cleanedData {
 		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
 		projects = append(projects, Project{
 			customer:                row[0],
@@ -51,7 +85,7 @@ func main() {
 			externalCostsChargeable: mustParseFloat(row[3]),
 			externalCosts:           mustParseFloat(row[4]),
 			invoice:                 []float32{},
-			fibu:                    []int{},
+			fibu:                    []string{},
 			paginiernr:              []string{},
 			invoiceNr:               []string{},
 			income:                  mustParseFloat(row[5]),
@@ -60,20 +94,52 @@ func main() {
 		})
 	}
 
+	projectsPR := []Project{}
+	for _, row := range chargabeleProjectsPR {
+		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
+		projects = append(projects, Project{
+			customer:                row[0],
+			number:                  row[1],
+			externalCostsChargeable: mustParseFloat(row[3]),
+			externalCosts:           mustParseFloat(row[4]),
+			invoice:                 []float32{},
+			fibu:                    []string{},
+			paginiernr:              []string{},
+			invoiceNr:               []string{},
+			income:                  mustParseFloat(row[5]),
+			revenue:                 mustParseFloat(row[2]),
+			db1:                     mustParseFloat(row[2]) - fk,
+		})
+	}
+
+	// all data from er
 	erData := erExcel.FirstSheet().FilterByHeader(erHeader)
+	erprData := erprExcel.FirstSheet().FilterByHeader(erHeader)
 
+	// include er into projects
 	for _, row := range erData {
-
 		for i, p := range projects {
 			if row[3] == p.number {
 				projects[i].paginiernr = append(projects[i].paginiernr, row[0])
 				projects[i].invoiceNr = append(projects[i].invoiceNr, row[1])
-				projects[i].fibu = append(projects[i].fibu, mustParseInt(row[2]))
+				projects[i].fibu = append(projects[i].fibu, row[2])
 				projects[i].invoice = append(projects[i].invoice, mustParseFloat(row[4]))
 			}
 		}
 	}
 
+	for _, row := range erprData {
+		for i, p := range projectsPR {
+			if row[3] == p.number {
+				projects[i].paginiernr = append(projects[i].paginiernr, row[0])
+				projects[i].invoiceNr = append(projects[i].invoiceNr, row[1])
+				projects[i].fibu = append(projects[i].fibu, row[2])
+				projects[i].invoice = append(projects[i].invoice, mustParseFloat(row[4]))
+			}
+		}
+	}
+
+	// insert data into new excel
 	for _, p := range projects {
 		currentPrefix := jobnrPrefix(p.number)
 		lastPrefix := jobnrPrefix(lastProject.number)
@@ -83,8 +149,18 @@ func main() {
 		destExcel.FirstSheet().Add(&p)
 	}
 	destExcel.FirstSheet().Add(&smy)
-
 	destExcel.FirstSheet().FreezeHeader()
+
+	for _, p := range projectsPR {
+		currentPrefix := jobnrPrefix(p.number)
+		lastPrefix := jobnrPrefix(lastProject.number)
+		if currentPrefix != lastPrefix && lastPrefix != "" {
+			destExcel.FirstSheet().Add(&customerSmy)
+		}
+		destExcel.Sheet("PR").Add(&p)
+	}
+	destExcel.Sheet("PR").Add(&smy)
+	destExcel.Sheet("PR").FreezeHeader()
 
 	destExcel.Save(resultPath)
 }
@@ -170,7 +246,7 @@ type Project struct {
 	externalCostsChargeable float32
 	externalCosts           float32
 	invoice                 []float32
-	fibu                    []int
+	fibu                    []string
 	paginiernr              []string
 	invoiceNr               []string
 	income                  float32
@@ -188,12 +264,12 @@ func (p *Project) Columns() []string {
 		"FK nwb",
 		"ER Aufwendungen",
 		"ER FiBu",
-		"Rechnungsnr",
+		"Leistungsart",
 		"DB 1",
 	}
 }
 
-// 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Rechnungsnr 8=Umsatz vor El
+// 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Leistungsart 8=Umsatz vor El
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(sh *excel.Sheet) {
@@ -214,7 +290,7 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	for i, fibu := range p.fibu {
 		erCells := map[int]Cell{
 			5: Cell{Value: p.invoice[i], Style: EuroStyle()},
-			6: Cell{Value: fibu, Style: DateStyle()},
+			6: Cell{Value: fibu, Style: NoStyle()},
 			7: Cell{Value: p.invoiceNr[i], Style: NoStyle()},
 		}
 		sumER = sumER + p.invoice[i]
@@ -242,9 +318,34 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	lastProject = *p
 }
 
+func removeRows(fromData [][]string, removeIndicator []string) [][]string {
+	fmt.Printf("amount rows input: %d\n", len(fromData))
+	resultData := [][]string{}
+	for _, row := range fromData {
+		if hasIdenticalItem(row, removeIndicator) {
+			continue
+		}
+		resultData = append(resultData, row)
+	}
+	fmt.Printf("amount rows output: %d\n", len(resultData))
+	return resultData
+}
+
+func hasIdenticalItem(slice, sliceToCompare []string) bool {
+	for _, item := range slice {
+		for _, compItem := range sliceToCompare {
+			if item == compItem {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func mustParseFloat(s string) float32 {
 	v, err := strconv.ParseFloat(s, 32)
 	if err != nil {
+		fmt.Println(err)
 		panic("couldn't parse string")
 	}
 	return float32(v)
@@ -253,9 +354,28 @@ func mustParseFloat(s string) float32 {
 func mustParseInt(s string) int {
 	v, err := strconv.Atoi(s)
 	if err != nil {
+		fmt.Println(err)
 		panic("couldn't parse string")
 	}
 	return v
+}
+
+func mustParseDate(s string) float32 {
+	layout := "Jan-06"
+	date, err := time.Parse(layout, s)
+	if err != nil {
+		fmt.Println(err)
+		panic("couldn't parse date")
+	}
+	refDate, err := time.Parse("02-01-2006", "01-01-1900")
+	if err != nil {
+		fmt.Println(err)
+		panic("couldn't parse date")
+	}
+	fmt.Printf("date: %s\nrefDate: %s\n", date.String(), refDate.String())
+	duration := date.Sub(refDate)
+	fmt.Printf("Duration: %s\n", duration.String())
+	return float32(duration.Hours() / float64(24))
 }
 
 func jobnrPrefix(jobnr string) string {
