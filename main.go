@@ -151,6 +151,10 @@ func main() {
 	destExcel.FirstSheet().Add(&smy)
 	destExcel.FirstSheet().FreezeHeader()
 
+	customerSmy = customerSummary{}
+	smy = summary{}
+	lastProject = Project{}
+
 	for _, p := range projectsPR {
 		currentPrefix := jobnrPrefix(p.number)
 		lastPrefix := jobnrPrefix(lastProject.number)
