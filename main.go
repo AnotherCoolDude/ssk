@@ -151,6 +151,7 @@ func main() {
 	destExcel.FirstSheet().Add(&smy)
 	destExcel.FirstSheet().FreezeHeader()
 
+	// reset globals
 	customerSmy = customerSummary{}
 	smy = summary{}
 	lastProject = Project{}
@@ -166,6 +167,7 @@ func main() {
 	destExcel.Sheet("PR").Add(&smy)
 	destExcel.Sheet("PR").FreezeHeader()
 
+	// save file
 	destExcel.Save(resultPath)
 }
 
