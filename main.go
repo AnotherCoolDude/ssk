@@ -324,14 +324,23 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	lastProject = *p
 }
 
-func removeRows(fromData [][]string, removeIndicator []string) [][]string {
+// removes the rows, that contain on if the indicator items. If reversed, removes all rows, that dont have an indicator
+func removeRows(fromData [][]string, indicator []string, reversed bool) [][]string {
 	fmt.Printf("amount rows input: %d\n", len(fromData))
 	resultData := [][]string{}
 	for _, row := range fromData {
-		if hasIdenticalItem(row, removeIndicator) {
-			continue
+
+		if !reversed {
+			if hasIdenticalItem(row, indicator) {
+				continue
+			}
+			resultData = append(resultData, row)
+		} else {
+			if hasIdenticalItem(row, indicator) {
+				resultData = append(resultData, row)
+			}
 		}
-		resultData = append(resultData, row)
+
 	}
 	fmt.Printf("amount rows output: %d\n", len(resultData))
 	return resultData
