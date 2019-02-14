@@ -175,15 +175,26 @@ func main() {
 		pnumbers19 = append(pnumbers19, row[0])
 	}
 
-	for _, p := range projects {
-		if hasIdenticalItem([]string{p.number}, pnumbers18) {
-			// adjust project
+	for _, adj := range adjustments18 {
+		for j, p := range projects {
+			if adj[0] == p.number {
+				// adjust project
+				projects[j].revenue -= mustParseFloat(adj[1])
+				projects[j].invoice = append(projects[j].invoice, mustParseFloat(adj[2])*-1)
+				projects[j].invoiceNr = append(projects[j].invoiceNr, fmt.Sprintf("%f EL, %f FK Anteil 17", mustParseFloat(adj[1]), mustParseFloat(adj[2])*-1))
+			}
 		}
 	}
 
-	for _, p := range projects {
-		if hasIdenticalItem([]string{p.number}, pnumbers19) {
-			// adjust project
+	for _, adj := range adjustments19 {
+		for j, p := range projects {
+			if adj[0] == p.number {
+				// adjust project
+				projects[j].revenue -= mustParseFloat(adj[1])
+				sub := projects[j].externalCosts + projects[j].externalCostsChargeable - mustParseFloat(adj[2])
+				projects[j].invoice = append(projects[j].invoice, sub*-1)
+				projects[j].invoiceNr = append(projects[j].invoiceNr, fmt.Sprintf("%f EL, %f FK Anteil 19", mustParseFloat(adj[1]), sub))
+			}
 		}
 	}
 
