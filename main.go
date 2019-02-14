@@ -16,7 +16,7 @@ const (
 	eingangsrechnungen   = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_17-19.xlsx"
 	eingangsrechnungenpr = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_pr_17-19.xlsx"
 	abgrenzung           = "/Users/christianhovenbitzer/Desktop/fremdkosten/01-2018.xlsx"
-	einbeziehen          = ""
+	einbeziehen          = "/Users/christianhovenbitzer/Desktop/fremdkosten/Abgrenzung Unfertige 2018.xlsx"
 	resultPath           = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
 )
 
@@ -29,7 +29,8 @@ var (
 	erExcel     *Excel
 	erprExcel   *Excel
 	destExcel   *Excel
-	abgrExcel   *Excel
+	abgr18Excel *Excel
+	abgr19Excel *Excel
 	lastProject Project
 	smy         summary
 	customerSmy customerSummary
@@ -41,7 +42,8 @@ func main() {
 	rentprExcel = File(rentabilitätpr, "")
 	erExcel = File(eingangsrechnungen, "")
 	erprExcel = File(eingangsrechnungenpr, "")
-	abgrExcel = File(abgrenzung, "")
+	abgr18Excel = File(abgrenzung, "")
+	abgr19Excel = File(einbeziehen, "")
 
 	smy = summary{}
 	customerSmy = customerSummary{}
@@ -65,19 +67,32 @@ func main() {
 	}
 
 	// rent cleaned from abgrenzung
-	indicator := abgrExcel.FirstSheet().FilterByHeader([]string{"Projektnummern", "Bemerkung"})
+	indicator := abgr18Excel.FirstSheet().FilterByHeader([]string{"Projektnummern", "Bemerkung"})
 	reduced := []string{}
 	for _, item := range indicator {
 		if item[1] == "2017" {
 			reduced = append(reduced, item[0])
 		}
-		fmt.Printf("amount of items to remove: %d\n", len(reduced))
 	}
-	cleanedData := removeRows(chargabeleProjects, reduced, false)
+	fmt.Printf("amount of items to remove: %d\n", len(reduced))
+	lastYearRemoved := removeRows(chargabeleProjects, reduced, false)
+
+	//rent cleaned from 2019 projects, that have no connection to 2018
+	indicator = abgr19Excel.FirstSheet().FilterByHeader([]string{"Projektnummern", "Jahr"})
+	reduced = []string{}
+	for _, item := range indicator {
+		if item[1] == "2018" {
+			reduced = append(reduced, item[0])
+		}
+	}
+	fmt.Printf("amount of items to remain added: %d\n", len(reduced))
+	nextYearAdjusted := removeRows(lastYearRemoved, reduced, true)
+
+	fmt.Printf("amount of projcts to be added to the final file: %d\n", len(nextYearAdjusted))
 
 	// create objects
 	projects := []Project{}
-	for _, row := range cleanedData {
+	for _, row := range nextYearAdjusted {
 		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
 		projects = append(projects, Project{
 			customer:                row[0],
