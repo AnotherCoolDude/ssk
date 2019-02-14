@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	rentabilität         = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
+	rentabilität         = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18-feb19.xlsx"
 	rentabilitätpr       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_pr_18.xlsx"
 	eingangsrechnungen   = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_17-19.xlsx"
 	eingangsrechnungenpr = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_pr_17-19.xlsx"
 	abgrenzung           = "/Users/christianhovenbitzer/Desktop/fremdkosten/01-2018.xlsx"
 	einbeziehen          = "/Users/christianhovenbitzer/Desktop/fremdkosten/Abgrenzung Unfertige 2018.xlsx"
 	adjust18             = "/Users/christianhovenbitzer/Desktop/fremdkosten/unfertige Leistungen 2017.xlsx"
-	adjust19             = "/Users/christianhovenbitzer/Desktop/fremdkosten/unfertige Leistungen 2018.xslx"
+	adjust19             = "/Users/christianhovenbitzer/Desktop/fremdkosten/unfertige Leistungen 2018.xlsx"
 
 	resultPath = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
 )
@@ -165,15 +165,6 @@ func main() {
 	//adjust unfinished projects
 	adjustments18 := adj18Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
 	adjustments19 := adj19Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
-	pnumbers18 := []string{}
-	for _, row := range adjustments18 {
-		pnumbers18 = append(pnumbers18, row[0])
-	}
-
-	pnumbers19 := []string{}
-	for _, row := range adjustments19 {
-		pnumbers19 = append(pnumbers19, row[0])
-	}
 
 	for _, adj := range adjustments18 {
 		for j, p := range projects {
@@ -395,6 +386,7 @@ func removeRows(fromData [][]string, indicator []string, reversed bool) [][]stri
 			}
 			resultData = append(resultData, row)
 		} else {
+			// needs some work
 			if hasIdenticalItem(row, indicator) {
 				resultData = append(resultData, row)
 			}
