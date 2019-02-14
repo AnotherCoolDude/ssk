@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/AnotherCoolDude/excel"
@@ -17,13 +16,17 @@ const (
 	eingangsrechnungenpr = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_pr_17-19.xlsx"
 	abgrenzung           = "/Users/christianhovenbitzer/Desktop/fremdkosten/01-2018.xlsx"
 	einbeziehen          = "/Users/christianhovenbitzer/Desktop/fremdkosten/Abgrenzung Unfertige 2018.xlsx"
-	resultPath           = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
+	adjust18             = "/Users/christianhovenbitzer/Desktop/fremdkosten/unfertige Leistungen 2017.xlsx"
+	adjust19             = "/Users/christianhovenbitzer/Desktop/fremdkosten/unfertige Leistungen 2018.xslx"
+
+	resultPath = "/Users/christianhovenbitzer/Desktop/fremdkosten/result_18.xlsx"
 )
 
 var (
 	rentColumns = []string{"A", "C", "E", "G", "I", "L", "E"}
 	erColumns   = []string{"A", "F", "G", "K"}
 	erHeader    = []string{"Paginiernummer", "Leistungsart", "FiBu Zeitraum", "Projekt Nr.", "Netto"}
+
 	rentExcel   *Excel
 	rentprExcel *Excel
 	erExcel     *Excel
@@ -31,6 +34,9 @@ var (
 	destExcel   *Excel
 	abgr18Excel *Excel
 	abgr19Excel *Excel
+	adj18Excel  *Excel
+	adj19Excel  *Excel
+
 	lastProject Project
 	smy         summary
 	customerSmy customerSummary
@@ -44,6 +50,8 @@ func main() {
 	erprExcel = File(eingangsrechnungenpr, "")
 	abgr18Excel = File(abgrenzung, "")
 	abgr19Excel = File(einbeziehen, "")
+	adj18Excel = File(adjust18, "")
+	adj19Excel = File(adjust19, "")
 
 	smy = summary{}
 	customerSmy = customerSummary{}
@@ -151,6 +159,31 @@ func main() {
 				projects[i].fibu = append(projects[i].fibu, row[2])
 				projects[i].invoice = append(projects[i].invoice, mustParseFloat(row[4]))
 			}
+		}
+	}
+
+	//adjust unfinished projects
+	adjustments18 := adj18Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
+	adjustments19 := adj19Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
+	pnumbers18 := []string{}
+	for _, row := range adjustments18 {
+		pnumbers18 = append(pnumbers18, row[0])
+	}
+
+	pnumbers19 := []string{}
+	for _, row := range adjustments19 {
+		pnumbers19 = append(pnumbers19, row[0])
+	}
+
+	for _, p := range projects {
+		if hasIdenticalItem([]string{p.number}, pnumbers18) {
+			// adjust project
+		}
+	}
+
+	for _, p := range projects {
+		if hasIdenticalItem([]string{p.number}, pnumbers19) {
+			// adjust project
 		}
 	}
 
@@ -409,6 +442,5 @@ func mustParseDate(s string) float32 {
 }
 
 func jobnrPrefix(jobnr string) string {
-	splited := strings.Split(jobnr, "-")
-	return splited[0]
+	return jobnr[:4]
 }
