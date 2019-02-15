@@ -227,7 +227,7 @@ func main() {
 		currentPrefix := jobnrPrefix(p.number)
 		lastPrefix := jobnrPrefix(lastProject.number)
 		if currentPrefix != lastPrefix && lastPrefix != "" {
-			destExcel.FirstSheet().Add(&customerSmy)
+			destExcel.Sheet("PR").Add(&customerSmy)
 		}
 		destExcel.Sheet("PR").Add(&p)
 	}
