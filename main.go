@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	rentabilität         = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18-feb19.xlsx"
+	rentabilität         = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
+	rentabilität19       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_JanFeb19.xlsx"
 	rentabilitätpr       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_pr_18.xlsx"
 	eingangsrechnungen   = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_17-19.xlsx"
 	eingangsrechnungenpr = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_pr_17-19.xlsx"
@@ -28,6 +29,7 @@ var (
 	erHeader    = []string{"Paginiernummer", "Leistungsart", "FiBu Zeitraum", "Projekt Nr.", "Netto"}
 
 	rentExcel   *Excel
+	rent19Excel *Excel
 	rentprExcel *Excel
 	erExcel     *Excel
 	erprExcel   *Excel
@@ -45,6 +47,7 @@ var (
 func main() {
 	destExcel = File(resultPath, "2018")
 	rentExcel = File(rentabilität, "")
+	rent19Excel = File(rentabilität19, "")
 	rentprExcel = File(rentabilitätpr, "")
 	erExcel = File(eingangsrechnungen, "")
 	erprExcel = File(eingangsrechnungenpr, "")
@@ -82,10 +85,18 @@ func main() {
 			reduced = append(reduced, item[0])
 		}
 	}
+	lastYearCleaned := [][]string{}
+	for _, row := range chargabeleProjects {
+		if hasIdenticalItem(row, reduced) {
+			continue
+		}
+		lastYearCleaned = append(lastYearCleaned, row)
+	}
 	fmt.Printf("amount of items to remove: %d\n", len(reduced))
-	lastYearRemoved := removeRows(chargabeleProjects, reduced, false)
 
 	//rent cleaned from 2019 projects, that have no connection to 2018
+	rent19Data := rent19Excel.FirstSheet().FilterByColumn(rentColumns)
+
 	indicator = abgr19Excel.FirstSheet().FilterByHeader([]string{"Projektnummern", "Jahr"})
 	reduced = []string{}
 	for _, item := range indicator {
@@ -93,14 +104,19 @@ func main() {
 			reduced = append(reduced, item[0])
 		}
 	}
-	fmt.Printf("amount of items to remain added: %d\n", len(reduced))
-	nextYearAdjusted := removeRows(lastYearRemoved, reduced, true)
 
-	fmt.Printf("amount of projcts to be added to the final file: %d\n", len(nextYearAdjusted))
+	for _, row := range rent19Data {
+		if hasIdenticalItem(row, reduced) {
+			lastYearCleaned = append(lastYearCleaned, row)
+		}
+	}
+	fmt.Printf("amount of items to add: %d\n", len(reduced))
+
+	fmt.Printf("amount of projcts to be added to the final file: %d\n", len(lastYearCleaned))
 
 	// create objects
 	projects := []Project{}
-	for _, row := range nextYearAdjusted {
+	for _, row := range lastYearCleaned {
 		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
 		projects = append(projects, Project{
 			customer:                row[0],
@@ -445,5 +461,8 @@ func mustParseDate(s string) float32 {
 }
 
 func jobnrPrefix(jobnr string) string {
+	if jobnr == "" {
+		return ""
+	}
 	return jobnr[:4]
 }
