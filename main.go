@@ -136,7 +136,7 @@ func main() {
 	projectsPR := []Project{}
 	for _, row := range chargabeleProjectsPR {
 		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
-		projects = append(projects, Project{
+		projectsPR = append(projectsPR, Project{
 			customer:                row[0],
 			number:                  row[1],
 			externalCostsChargeable: mustParseFloat(row[3]),
@@ -223,6 +223,7 @@ func main() {
 	lastProject = Project{}
 
 	// insert PR data
+	fmt.Printf("rows in projectsPR: %d\n", len(projectsPR))
 	for _, p := range projectsPR {
 		currentPrefix := jobnrPrefix(p.number)
 		lastPrefix := jobnrPrefix(lastProject.number)
