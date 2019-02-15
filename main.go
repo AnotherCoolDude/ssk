@@ -222,6 +222,7 @@ func main() {
 	smy = summary{}
 	lastProject = Project{}
 
+	// insert PR data
 	for _, p := range projectsPR {
 		currentPrefix := jobnrPrefix(p.number)
 		lastPrefix := jobnrPrefix(lastProject.number)
