@@ -182,13 +182,22 @@ func main() {
 	adjustments18 := adj18Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
 	adjustments19 := adj19Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
 
+	for i := 0; i <= 9; i++ {
+		fmt.Println("Adjustments 18:")
+		fmt.Println(adjustments18[i])
+		fmt.Println("Adjustments 19:")
+		fmt.Println(adjustments19[i])
+	}
+
 	for _, adj := range adjustments18 {
 		for j, p := range projects {
 			if adj[0] == p.number {
 				// adjust project
 				projects[j].revenue -= mustParseFloat(adj[1])
 				projects[j].invoice = append(projects[j].invoice, mustParseFloat(adj[2])*-1)
-				projects[j].invoiceNr = append(projects[j].invoiceNr, fmt.Sprintf("%f EL, %f FK Anteil 17", mustParseFloat(adj[1]), mustParseFloat(adj[2])*-1))
+				projects[j].fibu = append(projects[j].fibu, fmt.Sprintf("%f EL, %f FK Anteil 17", mustParseFloat(adj[1]), mustParseFloat(adj[2])*-1))
+				projects[j].invoiceNr = append(projects[j].invoiceNr, " ")
+				projects[j].paginiernr = append(projects[j].paginiernr, " ")
 			}
 		}
 	}
@@ -200,7 +209,9 @@ func main() {
 				projects[j].revenue -= mustParseFloat(adj[1])
 				sub := projects[j].externalCosts + projects[j].externalCostsChargeable - mustParseFloat(adj[2])
 				projects[j].invoice = append(projects[j].invoice, sub*-1)
-				projects[j].invoiceNr = append(projects[j].invoiceNr, fmt.Sprintf("%f EL, %f FK Anteil 19", mustParseFloat(adj[1]), sub))
+				projects[j].fibu = append(projects[j].fibu, fmt.Sprintf("%f EL, %f FK Anteil 19", mustParseFloat(adj[1]), sub))
+				projects[j].invoiceNr = append(projects[j].invoiceNr, " ")
+				projects[j].paginiernr = append(projects[j].paginiernr, " ")
 			}
 		}
 	}
