@@ -170,10 +170,10 @@ func main() {
 	for _, row := range erprData {
 		for i, p := range projectsPR {
 			if row[3] == p.number {
-				projects[i].paginiernr = append(projects[i].paginiernr, row[0])
-				projects[i].invoiceNr = append(projects[i].invoiceNr, row[1])
-				projects[i].fibu = append(projects[i].fibu, row[2])
-				projects[i].invoice = append(projects[i].invoice, mustParseFloat(row[4]))
+				projectsPR[i].paginiernr = append(projectsPR[i].paginiernr, row[0])
+				projectsPR[i].invoiceNr = append(projectsPR[i].invoiceNr, row[1])
+				projectsPR[i].fibu = append(projectsPR[i].fibu, row[2])
+				projectsPR[i].invoice = append(projectsPR[i].invoice, mustParseFloat(row[4]))
 			}
 		}
 	}
@@ -279,6 +279,7 @@ func (cs *customerSummary) Insert(sh *excel.Sheet) {
 	smy.tDB1 += cs.db1
 
 	customerSmy = customerSummary{}
+	fmt.Printf("customer %s added\n", lastProject.customer)
 }
 
 type summary struct {
