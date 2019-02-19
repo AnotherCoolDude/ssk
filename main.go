@@ -46,6 +46,8 @@ var (
 	customerSmy customerSummary
 
 	printer = message.NewPrinter(language.Make("de"))
+
+	adjustments = []adjustment{}
 )
 
 func main() {
@@ -192,7 +194,6 @@ func main() {
 	// 	fmt.Println("Adjustments 19:")
 	// 	fmt.Println(adjustments19[i])
 	// }
-	adjustments := []adjustment{}
 	for _, row := range adjustments18 {
 		adjustments = append(adjustments, adjustment{
 			projectnr:     row[0],
@@ -260,11 +261,6 @@ func main() {
 			destExcel.FirstSheet().Add(&customerSmy)
 		}
 		destExcel.FirstSheet().Add(&p)
-		for _, adj := range adjustments {
-			if adj.projectnr == p.number {
-				destExcel.FirstSheet().Add(&adj)
-			}
-		}
 	}
 	destExcel.FirstSheet().Add(&smy)
 	destExcel.FirstSheet().FreezeHeader()
@@ -306,9 +302,9 @@ func (adj *adjustment) Columns() []string {
 
 func (adj *adjustment) Insert(sh *excel.Sheet) {
 	adjCells := map[int]Cell{
-		1: Cell{Value: adj.note, Style: NoStyle()},
 		2: Cell{Value: adj.revenue, Style: EuroStyle()},
 		5: Cell{Value: adj.externalCosts, Style: EuroStyle()},
+		6: Cell{Value: adj.note, Style: NoStyle()},
 	}
 	sh.AddRow(adjCells)
 
@@ -449,6 +445,14 @@ func (p *Project) Insert(sh *excel.Sheet) {
 		}
 		sumER = sumER + p.invoice[i]
 		sh.AddRow(erCells)
+	}
+
+	for _, adj := range adjustments {
+		if p.number == adj.projectnr {
+			adj.Insert(sh)
+			sumER += adj.externalCosts
+			p.revenue += adj.revenue
+		}
 	}
 
 	projectResultCells := map[int]Cell{
