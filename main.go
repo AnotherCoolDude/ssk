@@ -7,6 +7,8 @@ import (
 
 	"github.com/AnotherCoolDude/excel"
 	. "github.com/AnotherCoolDude/excel"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 const (
@@ -42,6 +44,8 @@ var (
 	lastProject Project
 	smy         summary
 	customerSmy customerSummary
+
+	printer = message.NewPrinter(language.Make("de"))
 )
 
 func main() {
@@ -182,39 +186,71 @@ func main() {
 	adjustments18 := adj18Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
 	adjustments19 := adj19Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
 
-	for i := 0; i <= 9; i++ {
-		fmt.Println("Adjustments 18:")
-		fmt.Println(adjustments18[i])
-		fmt.Println("Adjustments 19:")
-		fmt.Println(adjustments19[i])
+	// for i := 0; i <= 9; i++ {
+	// 	fmt.Println("Adjustments 18:")
+	// 	fmt.Println(adjustments18[i])
+	// 	fmt.Println("Adjustments 19:")
+	// 	fmt.Println(adjustments19[i])
+	// }
+	adjustments := []adjustment{}
+	for _, row := range adjustments18 {
+		adjustments = append(adjustments, adjustment{
+			projectnr:     row[0],
+			revenue:       mustParseFloat(row[1]) * -1,
+			externalCosts: mustParseFloat(row[2]) * -1,
+			note:          printer.Sprint("Anteil 2017"),
+		})
 	}
 
-	for _, adj := range adjustments18 {
-		for j, p := range projects {
-			if adj[0] == p.number {
-				// adjust project
-				projects[j].revenue -= mustParseFloat(adj[1])
-				projects[j].invoice = append(projects[j].invoice, mustParseFloat(adj[2])*-1)
-				projects[j].fibu = append(projects[j].fibu, fmt.Sprintf("%f EL, %f FK Anteil 17", mustParseFloat(adj[1]), mustParseFloat(adj[2])*-1))
-				projects[j].invoiceNr = append(projects[j].invoiceNr, " ")
-				projects[j].paginiernr = append(projects[j].paginiernr, " ")
+	for _, row := range adjustments19 {
+		adjustments = append(adjustments, adjustment{
+			projectnr:     row[0],
+			revenue:       mustParseFloat(row[1]) * -1,
+			externalCosts: mustParseFloat(row[2]),
+			note:          printer.Sprint("Anteil 2019"),
+		})
+	}
+
+	// since adjustments19 contains external costs from 18, we have to do this
+	for _, p := range projects {
+		for i, adj := range adjustments {
+			if p.number == adj.projectnr {
+				thisYear := adj.externalCosts
+				adjustments[i].externalCosts = 0.0
+				for _, er := range p.invoice {
+					adjustments[i].externalCosts += er
+				}
+				adjustments[i].externalCosts -= thisYear
 			}
 		}
 	}
 
-	for _, adj := range adjustments19 {
-		for j, p := range projects {
-			if adj[0] == p.number {
-				// adjust project
-				projects[j].revenue -= mustParseFloat(adj[1])
-				sub := projects[j].externalCosts + projects[j].externalCostsChargeable - mustParseFloat(adj[2])
-				projects[j].invoice = append(projects[j].invoice, sub*-1)
-				projects[j].fibu = append(projects[j].fibu, fmt.Sprintf("%f EL, %f FK Anteil 19", mustParseFloat(adj[1]), sub))
-				projects[j].invoiceNr = append(projects[j].invoiceNr, " ")
-				projects[j].paginiernr = append(projects[j].paginiernr, " ")
-			}
-		}
-	}
+	// for _, adj := range adjustments18 {
+	// 	for j, p := range projects {
+	// 		if adj[0] == p.number {
+	// 			// adjust project
+	// 			projects[j].revenue -= mustParseFloat(adj[1])
+	// 			projects[j].invoice = append(projects[j].invoice, mustParseFloat(adj[2])*-1)
+	// 			projects[j].fibu = append(projects[j].fibu, printer.Sprintf("%.2f EL, %.2f FK Anteil 17", mustParseFloat(adj[1]), mustParseFloat(adj[2])*-1))
+	// 			projects[j].invoiceNr = append(projects[j].invoiceNr, " ")
+	// 			projects[j].paginiernr = append(projects[j].paginiernr, " ")
+	// 		}
+	// 	}
+	// }
+
+	// for _, adj := range adjustments19 {
+	// 	for j, p := range projects {
+	// 		if adj[0] == p.number {
+	// 			// adjust project
+	// 			projects[j].revenue -= mustParseFloat(adj[1])
+	// 			sub := projects[j].externalCosts + projects[j].externalCostsChargeable - mustParseFloat(adj[2])
+	// 			projects[j].invoice = append(projects[j].invoice, sub*-1)
+	// 			projects[j].fibu = append(projects[j].fibu, printer.Sprintf("%.2f EL, %.2f FK Anteil 19", mustParseFloat(adj[1]), sub))
+	// 			projects[j].invoiceNr = append(projects[j].invoiceNr, " ")
+	// 			projects[j].paginiernr = append(projects[j].paginiernr, " ")
+	// 		}
+	// 	}
+	// }
 
 	// insert data into new excel
 	for _, p := range projects {
@@ -224,6 +260,11 @@ func main() {
 			destExcel.FirstSheet().Add(&customerSmy)
 		}
 		destExcel.FirstSheet().Add(&p)
+		for _, adj := range adjustments {
+			if adj.projectnr == p.number {
+				destExcel.FirstSheet().Add(&adj)
+			}
+		}
 	}
 	destExcel.FirstSheet().Add(&smy)
 	destExcel.FirstSheet().FreezeHeader()
@@ -249,6 +290,31 @@ func main() {
 	// save file
 	destExcel.Save(resultPath)
 }
+
+// adjustment struct
+
+type adjustment struct {
+	projectnr     string
+	revenue       float32
+	externalCosts float32
+	note          string
+}
+
+func (adj *adjustment) Columns() []string {
+	return []string{}
+}
+
+func (adj *adjustment) Insert(sh *excel.Sheet) {
+	adjCells := map[int]Cell{
+		1: Cell{Value: adj.note, Style: NoStyle()},
+		2: Cell{Value: adj.revenue, Style: EuroStyle()},
+		5: Cell{Value: adj.externalCosts, Style: EuroStyle()},
+	}
+	sh.AddRow(adjCells)
+
+}
+
+// customer summary struct
 
 type customerSummary struct {
 	customer string
@@ -292,6 +358,8 @@ func (cs *customerSummary) Insert(sh *excel.Sheet) {
 	customerSmy = customerSummary{}
 	fmt.Printf("customer %s added\n", lastProject.customer)
 }
+
+// summary struct
 
 type summary struct {
 	tAR  float32
