@@ -426,8 +426,7 @@ func (p *Project) Insert(sh *excel.Sheet) {
 			adj.Insert(sh)
 			sumER += adj.externalCosts
 			p.revenue += adj.revenue
-			p.db1 += adj.revenue
-			p.db1 += adj.externalCosts
+			p.db1 = p.revenue - sumER
 		}
 	}
 
