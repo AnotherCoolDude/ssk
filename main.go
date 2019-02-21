@@ -188,12 +188,6 @@ func main() {
 	adjustments18 := adj18Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
 	adjustments19 := adj19Excel.Sheet("konsolidiert").FilterByColumn([]string{"A", "B", "C"})
 
-	// for i := 0; i <= 9; i++ {
-	// 	fmt.Println("Adjustments 18:")
-	// 	fmt.Println(adjustments18[i])
-	// 	fmt.Println("Adjustments 19:")
-	// 	fmt.Println(adjustments19[i])
-	// }
 	for _, row := range adjustments18 {
 		adjustments = append(adjustments, adjustment{
 			projectnr:     row[0],
@@ -276,9 +270,9 @@ func (adj *adjustment) Columns() []string {
 
 func (adj *adjustment) Insert(sh *excel.Sheet) {
 	adjCells := map[int]Cell{
-		2: Cell{Value: adj.revenue, Style: EuroStyle()},
-		5: Cell{Value: adj.externalCosts, Style: EuroStyle()},
-		6: Cell{Value: adj.note, Style: NoStyle()},
+		8: Cell{Value: adj.revenue, Style: EuroStyle()},
+		9: Cell{Value: adj.externalCosts, Style: EuroStyle()},
+		1: Cell{Value: adj.note, Style: NoStyle()},
 	}
 	sh.AddRow(adjCells)
 
@@ -292,6 +286,8 @@ type customerSummary struct {
 	wb       float32
 	nwb      float32
 	er       float32
+	abgrEL   float32
+	abgrFK   float32
 	db1      float32
 }
 
@@ -305,15 +301,17 @@ func (cs *customerSummary) Insert(sh *excel.Sheet) {
 	tbeStyle := Style{Border: Top, Format: Euro}
 
 	customerSumCells := map[int]Cell{
-		0: Cell{Value: lastProject.customer, Style: tbnfStyle},
-		1: tbCell,
-		2: Cell{Value: cs.ar, Style: tbeStyle},
-		3: Cell{Value: cs.wb, Style: tbeStyle},
-		4: Cell{Value: cs.nwb, Style: tbeStyle},
-		5: Cell{Value: cs.er, Style: tbeStyle},
-		6: tbCell,
-		7: tbCell,
-		8: Cell{Value: cs.db1, Style: tbeStyle},
+		0:  Cell{Value: lastProject.customer, Style: tbnfStyle},
+		1:  tbCell,
+		2:  Cell{Value: cs.ar, Style: tbeStyle},
+		3:  Cell{Value: cs.wb, Style: tbeStyle},
+		4:  Cell{Value: cs.nwb, Style: tbeStyle},
+		5:  Cell{Value: cs.er, Style: tbeStyle},
+		6:  tbCell,
+		7:  tbCell,
+		8:  Cell{Value: cs.abgrEL, Style: tbeStyle},
+		9:  Cell{Value: cs.abgrFK, Style: tbeStyle},
+		10: Cell{Value: cs.db1, Style: tbeStyle},
 	}
 	sh.AddRow(customerSumCells)
 	sh.AddEmptyRow()
@@ -323,6 +321,8 @@ func (cs *customerSummary) Insert(sh *excel.Sheet) {
 	smy.tWB += cs.wb
 	smy.tNWB += cs.nwb
 	smy.tER += cs.er
+	smy.tAbgrEL += cs.abgrEL
+	smy.tAbgrFK += cs.abgrFK
 	smy.tDB1 += cs.db1
 
 	customerSmy = customerSummary{}
@@ -332,11 +332,13 @@ func (cs *customerSummary) Insert(sh *excel.Sheet) {
 // summary struct
 
 type summary struct {
-	tAR  float32
-	tWB  float32
-	tNWB float32
-	tER  float32
-	tDB1 float32
+	tAR     float32
+	tWB     float32
+	tNWB    float32
+	tER     float32
+	tAbgrEL float32
+	tAbgrFK float32
+	tDB1    float32
 }
 
 func (s *summary) Columns() []string {
@@ -349,15 +351,17 @@ func (s *summary) Insert(sh *excel.Sheet) {
 	topBorderCell := Cell{Value: " ", Style: Style{Border: Top, Format: NoFormat}}
 
 	totalCells := map[int]excel.Cell{
-		0: Cell{Value: "Gesamt", Style: tbStyle},
-		1: topBorderCell,
-		2: Cell{Value: smy.tAR, Style: tbStyle},
-		3: Cell{Value: smy.tWB, Style: tbStyle},
-		4: Cell{Value: smy.tNWB, Style: tbStyle},
-		5: Cell{Value: smy.tER, Style: tbStyle},
-		6: topBorderCell,
-		7: topBorderCell,
-		8: Cell{Value: smy.tDB1, Style: tbStyle},
+		0:  Cell{Value: "Gesamt", Style: tbStyle},
+		1:  topBorderCell,
+		2:  Cell{Value: smy.tAR, Style: tbStyle},
+		3:  Cell{Value: smy.tWB, Style: tbStyle},
+		4:  Cell{Value: smy.tNWB, Style: tbStyle},
+		5:  Cell{Value: smy.tER, Style: tbStyle},
+		6:  topBorderCell,
+		7:  topBorderCell,
+		8:  Cell{Value: smy.tAbgrEL, Style: tbStyle},
+		9:  Cell{Value: smy.tAbgrFK, Style: tbStyle},
+		10: Cell{Value: smy.tDB1, Style: tbStyle},
 	}
 	sh.AddEmptyRow()
 	sh.AddRow(totalCells)
@@ -389,11 +393,13 @@ func (p *Project) Columns() []string {
 		"ER Aufwendungen",
 		"ER FiBu",
 		"Leistungsart",
+		"Abgrenzung EL",
+		"Abgrenzung FK",
 		"DB 1",
 	}
 }
 
-// 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Leistungsart 8=Umsatz vor El
+// 0=Kunde 1=Jobnr 2=AR Erlös 3=FKwb 4=FKnwb 5=Eingangsr 6=FiBu 7=Leistungsart 8=Abgr EL 9=Abgr FK 10=DB1
 
 // Insert inserts values from struct Project
 func (p *Project) Insert(sh *excel.Sheet) {
@@ -401,11 +407,11 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	topBorderCell := Cell{Value: " ", Style: Style{Border: Top, Format: NoFormat}}
 
 	projectCells := map[int]Cell{
-		1: Cell{Value: p.number, Style: NoStyle()},
-		2: Cell{Value: p.revenue, Style: EuroStyle()},
-		3: Cell{Value: p.externalCostsChargeable, Style: EuroStyle()},
-		4: Cell{Value: p.externalCosts, Style: EuroStyle()},
-		8: Cell{Value: p.db1, Style: EuroStyle()},
+		1:  Cell{Value: p.number, Style: NoStyle()},
+		2:  Cell{Value: p.revenue, Style: EuroStyle()},
+		3:  Cell{Value: p.externalCostsChargeable, Style: EuroStyle()},
+		4:  Cell{Value: p.externalCosts, Style: EuroStyle()},
+		10: Cell{Value: p.db1, Style: EuroStyle()},
 	}
 	sh.AddRow(projectCells)
 
@@ -421,23 +427,29 @@ func (p *Project) Insert(sh *excel.Sheet) {
 		sh.AddRow(erCells)
 	}
 
+	currentAdj := adjustment{}
 	for _, adj := range adjustments {
 		if p.number == adj.projectnr {
 			adj.Insert(sh)
-			sumER += adj.externalCosts
-			p.revenue += adj.revenue
-			p.db1 = p.revenue - sumER
+			currentAdj = adj
+			// sumER += adj.externalCosts
+			// p.revenue += adj.revenue
+			// p.db1 = p.revenue - sumER
+			reduction := adj.externalCosts + adj.revenue
+			p.db1 += reduction
 		}
 	}
 
 	projectResultCells := map[int]Cell{
-		2: Cell{Value: p.revenue, Style: tbeStyle},
-		3: Cell{Value: p.externalCostsChargeable, Style: tbeStyle},
-		4: Cell{Value: p.externalCosts, Style: tbeStyle},
-		5: Cell{Value: sumER, Style: tbeStyle},
-		6: topBorderCell,
-		7: topBorderCell,
-		8: Cell{Value: p.db1, Style: tbeStyle},
+		2:  Cell{Value: p.revenue, Style: tbeStyle},
+		3:  Cell{Value: p.externalCostsChargeable, Style: tbeStyle},
+		4:  Cell{Value: p.externalCosts, Style: tbeStyle},
+		5:  Cell{Value: sumER, Style: tbeStyle},
+		6:  topBorderCell,
+		7:  topBorderCell,
+		8:  Cell{Value: currentAdj.revenue, Style: tbeStyle},
+		9:  Cell{Value: currentAdj.externalCosts, Style: tbeStyle},
+		10: Cell{Value: p.db1, Style: tbeStyle},
 	}
 	sh.AddRow(projectResultCells)
 	sh.AddEmptyRow()
@@ -446,6 +458,8 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	customerSmy.wb += p.externalCostsChargeable
 	customerSmy.nwb += p.externalCosts
 	customerSmy.er += sumER
+	customerSmy.abgrEL += currentAdj.revenue
+	customerSmy.abgrFK += currentAdj.externalCosts
 	customerSmy.db1 += p.db1
 
 	lastProject = *p
