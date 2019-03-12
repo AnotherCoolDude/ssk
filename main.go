@@ -419,18 +419,22 @@ func (p *Project) Insert(sh *excel.Sheet) {
 
 	var sumER float32
 
+	invoiceCells := []Coordinates{}
 	for i, fibu := range p.fibu {
 		erCells := map[int]Cell{
 			5: Cell{Value: p.invoice[i], Style: EuroStyle()},
 			6: Cell{Value: fibu, Style: NoStyle()},
 			7: Cell{Value: p.invoiceNr[i], Style: NoStyle()},
 		}
+		invoiceCells = append(invoiceCells, Coordinates{Row: sh.CurrentRow(), Column: 5})
 		sumER = sumER + p.invoice[i]
 		sh.AddRow(erCells)
 	}
 
 	p.db1 -= sumER
 
+	adjRevCells := []Coordinates{}
+	adjExtCostsCells := []Coordinates{}
 	currentAdj := adjustment{}
 	for _, adj := range adjustments {
 		if p.number == adj.projectnr {
@@ -439,21 +443,31 @@ func (p *Project) Insert(sh *excel.Sheet) {
 			// sumER += adj.externalCosts
 			// p.revenue += adj.revenue
 			// p.db1 = p.revenue - sumER
+			adjRevCells = append(adjRevCells, Coordinates{Row: sh.CurrentRow(), Column: 8})
+			adjExtCostsCells = append(adjExtCostsCells, Coordinates{Row: sh.CurrentRow(), Column: 9})
 			reduction := adj.externalCosts + adj.revenue
 			p.db1 += reduction
 		}
 	}
 
+	invoiceFormula := Formula{Coords: invoiceCells}
+	adjRevFormula := Formula{Coords: adjRevCells}
+	adjExtCostsFormula := Formula{Coords: adjExtCostsCells}
+	db1Formula := Formula{Coords: []Coordinates{
+		Coordinates{Row: sh.NextRow(), Column: 5},
+		Coordinates{Row: sh.NextRow(), Column: 8},
+		Coordinates{Row: sh.NextRow(), Column: 9},
+	}}
 	projectResultCells := map[int]Cell{
 		2:  Cell{Value: p.revenue, Style: tbeStyle},
 		3:  Cell{Value: p.externalCostsChargeable, Style: tbeStyle},
 		4:  Cell{Value: p.externalCosts, Style: tbeStyle},
-		5:  Cell{Value: sumER, Style: tbeStyle},
+		5:  Cell{Value: invoiceFormula.Add(), Style: tbeStyle},
 		6:  topBorderCell,
 		7:  topBorderCell,
-		8:  Cell{Value: currentAdj.revenue, Style: tbeStyle},
-		9:  Cell{Value: currentAdj.externalCosts, Style: tbeStyle},
-		10: Cell{Value: p.db1, Style: tbeStyle},
+		8:  Cell{Value: adjRevFormula.Add(), Style: tbeStyle},
+		9:  Cell{Value: adjExtCostsFormula.Add(), Style: tbeStyle},
+		10: Cell{Value: db1Formula.Substract(func(coords []Coordinates) Coordinates { return coords[0] }), Style: tbeStyle},
 	}
 	sh.AddRow(projectResultCells)
 	sh.AddEmptyRow()
