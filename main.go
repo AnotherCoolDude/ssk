@@ -1,5 +1,7 @@
 package main
 
+// TODO DB1 = AR - ER
+
 import (
 	"fmt"
 	"strconv"
@@ -12,7 +14,7 @@ import (
 )
 
 const (
-	rentabilität         = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18.xlsx"
+	rentabilität         = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_18-feb19.xlsx"
 	rentabilität19       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_JanFeb19.xlsx"
 	rentabilitätpr       = "/Users/christianhovenbitzer/Desktop/fremdkosten/rent_pr_18.xlsx"
 	eingangsrechnungen   = "/Users/christianhovenbitzer/Desktop/fremdkosten/er_rechnungsbuch_17-19.xlsx"
@@ -123,7 +125,7 @@ func main() {
 	// create objects
 	projects := []Project{}
 	for _, row := range lastYearCleaned {
-		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
+		//fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
 		projects = append(projects, Project{
 			customer:                row[0],
 			number:                  row[1],
@@ -135,13 +137,13 @@ func main() {
 			invoiceNr:               []string{},
 			income:                  mustParseFloat(row[5]),
 			revenue:                 mustParseFloat(row[2]),
-			db1:                     mustParseFloat(row[2]) - fk,
+			db1:                     mustParseFloat(row[2]),
 		})
 	}
 
 	projectsPR := []Project{}
 	for _, row := range chargabeleProjectsPR {
-		fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
+		//fk := mustParseFloat(row[3]) + mustParseFloat(row[4])
 		projectsPR = append(projectsPR, Project{
 			customer:                row[0],
 			number:                  row[1],
@@ -153,7 +155,7 @@ func main() {
 			invoiceNr:               []string{},
 			income:                  mustParseFloat(row[5]),
 			revenue:                 mustParseFloat(row[2]),
-			db1:                     mustParseFloat(row[2]) - fk,
+			db1:                     mustParseFloat(row[2]),
 		})
 	}
 
@@ -407,11 +409,11 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	topBorderCell := Cell{Value: " ", Style: Style{Border: Top, Format: NoFormat}}
 
 	projectCells := map[int]Cell{
-		1:  Cell{Value: p.number, Style: NoStyle()},
-		2:  Cell{Value: p.revenue, Style: EuroStyle()},
-		3:  Cell{Value: p.externalCostsChargeable, Style: EuroStyle()},
-		4:  Cell{Value: p.externalCosts, Style: EuroStyle()},
-		10: Cell{Value: p.db1, Style: EuroStyle()},
+		1: Cell{Value: p.number, Style: NoStyle()},
+		2: Cell{Value: p.revenue, Style: EuroStyle()},
+		3: Cell{Value: p.externalCostsChargeable, Style: EuroStyle()},
+		4: Cell{Value: p.externalCosts, Style: EuroStyle()},
+		//10: Cell{Value: p.db1, Style: EuroStyle()},
 	}
 	sh.AddRow(projectCells)
 
@@ -426,6 +428,8 @@ func (p *Project) Insert(sh *excel.Sheet) {
 		sumER = sumER + p.invoice[i]
 		sh.AddRow(erCells)
 	}
+
+	p.db1 -= sumER
 
 	currentAdj := adjustment{}
 	for _, adj := range adjustments {
