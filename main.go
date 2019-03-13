@@ -426,9 +426,9 @@ func (p *Project) Insert(sh *excel.Sheet) {
 			6: Cell{Value: fibu, Style: NoStyle()},
 			7: Cell{Value: p.invoiceNr[i], Style: NoStyle()},
 		}
-		invoiceCells = append(invoiceCells, Coordinates{Row: sh.CurrentRow(), Column: 5})
 		sumER = sumER + p.invoice[i]
 		sh.AddRow(erCells)
+		invoiceCells = append(invoiceCells, Coordinates{Row: sh.CurrentRow(), Column: 5})
 	}
 
 	p.db1 -= sumER
@@ -454,6 +454,7 @@ func (p *Project) Insert(sh *excel.Sheet) {
 	adjRevFormula := Formula{Coords: adjRevCells}
 	adjExtCostsFormula := Formula{Coords: adjExtCostsCells}
 	db1Formula := Formula{Coords: []Coordinates{
+		Coordinates{Row: sh.NextRow(), Column: 2},
 		Coordinates{Row: sh.NextRow(), Column: 5},
 		Coordinates{Row: sh.NextRow(), Column: 8},
 		Coordinates{Row: sh.NextRow(), Column: 9},
