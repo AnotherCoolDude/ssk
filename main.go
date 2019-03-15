@@ -291,41 +291,61 @@ type customerSummary struct {
 	abgrEL   float32
 	abgrFK   float32
 	db1      float32
+	cellMap  map[string][]Coordinates
 }
 
-func (cs *customerSummary) Columns() []string {
+func (s *customerSummary) Columns() []string {
 	return []string{}
 }
 
-func (cs *customerSummary) Insert(sh *excel.Sheet) {
+func (s *customerSummary) Insert(sh *excel.Sheet) {
 	tbnfStyle := Style{Border: Top, Format: NoFormat}
 	tbCell := Cell{Value: " ", Style: tbnfStyle}
 	tbeStyle := Style{Border: Top, Format: Euro}
 
+	// Formulas
+	arFormula := Formula{Coords: s.cellMap["ar"]}
+	wbFormula := Formula{Coords: s.cellMap["wb"]}
+	nwbFormula := Formula{Coords: s.cellMap["nwb"]}
+	erFormula := Formula{Coords: s.cellMap["er"]}
+	abgrELFormula := Formula{Coords: s.cellMap["abgrEL"]}
+	abgrFKFormula := Formula{Coords: s.cellMap["abgrFK"]}
+	db1Formula := Formula{Coords: s.cellMap["db1"]}
+
 	customerSumCells := map[int]Cell{
 		0:  Cell{Value: lastProject.customer, Style: tbnfStyle},
 		1:  tbCell,
-		2:  Cell{Value: cs.ar, Style: tbeStyle},
-		3:  Cell{Value: cs.wb, Style: tbeStyle},
-		4:  Cell{Value: cs.nwb, Style: tbeStyle},
-		5:  Cell{Value: cs.er, Style: tbeStyle},
+		2:  Cell{Value: arFormula.Add(), Style: tbeStyle},
+		3:  Cell{Value: wbFormula.Add(), Style: tbeStyle},
+		4:  Cell{Value: nwbFormula.Add(), Style: tbeStyle},
+		5:  Cell{Value: erFormula.Add(), Style: tbeStyle},
 		6:  tbCell,
 		7:  tbCell,
-		8:  Cell{Value: cs.abgrEL, Style: tbeStyle},
-		9:  Cell{Value: cs.abgrFK, Style: tbeStyle},
-		10: Cell{Value: cs.db1, Style: tbeStyle},
+		8:  Cell{Value: abgrELFormula.Add(), Style: tbeStyle},
+		9:  Cell{Value: abgrFKFormula.Add(), Style: tbeStyle},
+		10: Cell{Value: db1Formula.Add(), Style: tbeStyle},
 	}
 	sh.AddRow(customerSumCells)
+	if smy.cellMap == nil {
+		smy.cellMap = map[string][]Coordinates{}
+	}
+	smy.cellMap["ar"] = append(smy.cellMap["ar"], Coordinates{Row: sh.CurrentRow(), Column: 2})
+	smy.cellMap["wb"] = append(smy.cellMap["wb"], Coordinates{Row: sh.CurrentRow(), Column: 3})
+	smy.cellMap["nwb"] = append(smy.cellMap["nwb"], Coordinates{Row: sh.CurrentRow(), Column: 4})
+	smy.cellMap["er"] = append(smy.cellMap["er"], Coordinates{Row: sh.CurrentRow(), Column: 5})
+	smy.cellMap["abgrEL"] = append(smy.cellMap["abgrEL"], Coordinates{Row: sh.CurrentRow(), Column: 8})
+	smy.cellMap["abgrFK"] = append(smy.cellMap["abgrFK"], Coordinates{Row: sh.CurrentRow(), Column: 9})
+	smy.cellMap["db1"] = append(smy.cellMap["db1"], Coordinates{Row: sh.CurrentRow(), Column: 10})
 	sh.AddEmptyRow()
 	sh.AddEmptyRow()
 
-	smy.tAR += cs.ar
-	smy.tWB += cs.wb
-	smy.tNWB += cs.nwb
-	smy.tER += cs.er
-	smy.tAbgrEL += cs.abgrEL
-	smy.tAbgrFK += cs.abgrFK
-	smy.tDB1 += cs.db1
+	smy.tAR += s.ar
+	smy.tWB += s.wb
+	smy.tNWB += s.nwb
+	smy.tER += s.er
+	smy.tAbgrEL += s.abgrEL
+	smy.tAbgrFK += s.abgrFK
+	smy.tDB1 += s.db1
 
 	customerSmy = customerSummary{}
 	fmt.Printf("customer %s added\n", lastProject.customer)
@@ -341,6 +361,7 @@ type summary struct {
 	tAbgrEL float32
 	tAbgrFK float32
 	tDB1    float32
+	cellMap map[string][]Coordinates
 }
 
 func (s *summary) Columns() []string {
@@ -348,22 +369,29 @@ func (s *summary) Columns() []string {
 }
 
 func (s *summary) Insert(sh *excel.Sheet) {
-
 	tbStyle := excel.Style{Border: Top, Format: Euro}
 	topBorderCell := Cell{Value: " ", Style: Style{Border: Top, Format: NoFormat}}
+
+	arFormula := Formula{Coords: s.cellMap["ar"]}
+	wbFormula := Formula{Coords: s.cellMap["wb"]}
+	nwbFormula := Formula{Coords: s.cellMap["nwb"]}
+	erFormula := Formula{Coords: s.cellMap["er"]}
+	abgrELFormula := Formula{Coords: s.cellMap["abgrEL"]}
+	abgrFKFormula := Formula{Coords: s.cellMap["abgrFK"]}
+	db1Formula := Formula{Coords: s.cellMap["db1"]}
 
 	totalCells := map[int]excel.Cell{
 		0:  Cell{Value: "Gesamt", Style: tbStyle},
 		1:  topBorderCell,
-		2:  Cell{Value: smy.tAR, Style: tbStyle},
-		3:  Cell{Value: smy.tWB, Style: tbStyle},
-		4:  Cell{Value: smy.tNWB, Style: tbStyle},
-		5:  Cell{Value: smy.tER, Style: tbStyle},
+		2:  Cell{Value: arFormula.Add(), Style: tbStyle},
+		3:  Cell{Value: wbFormula.Add(), Style: tbStyle},
+		4:  Cell{Value: nwbFormula.Add(), Style: tbStyle},
+		5:  Cell{Value: erFormula.Add(), Style: tbStyle},
 		6:  topBorderCell,
 		7:  topBorderCell,
-		8:  Cell{Value: smy.tAbgrEL, Style: tbStyle},
-		9:  Cell{Value: smy.tAbgrFK, Style: tbStyle},
-		10: Cell{Value: smy.tDB1, Style: tbStyle},
+		8:  Cell{Value: abgrELFormula.Add(), Style: tbStyle},
+		9:  Cell{Value: abgrFKFormula.Add(), Style: tbStyle},
+		10: Cell{Value: db1Formula.Add(), Style: tbStyle},
 	}
 	sh.AddEmptyRow()
 	sh.AddRow(totalCells)
@@ -413,7 +441,6 @@ func (p *Project) Insert(sh *excel.Sheet) {
 		2: Cell{Value: p.revenue, Style: EuroStyle()},
 		3: Cell{Value: p.externalCostsChargeable, Style: EuroStyle()},
 		4: Cell{Value: p.externalCosts, Style: EuroStyle()},
-		//10: Cell{Value: p.db1, Style: EuroStyle()},
 	}
 	sh.AddRow(projectCells)
 
@@ -471,6 +498,16 @@ func (p *Project) Insert(sh *excel.Sheet) {
 		10: Cell{Value: db1Formula.Substract(func(coords []Coordinates) Coordinates { return coords[0] }), Style: tbeStyle},
 	}
 	sh.AddRow(projectResultCells)
+	if customerSmy.cellMap == nil {
+		customerSmy.cellMap = map[string][]Coordinates{}
+	}
+	customerSmy.cellMap["ar"] = append(customerSmy.cellMap["ar"], Coordinates{Row: sh.CurrentRow(), Column: 2})
+	customerSmy.cellMap["wb"] = append(customerSmy.cellMap["wb"], Coordinates{Row: sh.CurrentRow(), Column: 3})
+	customerSmy.cellMap["nwb"] = append(customerSmy.cellMap["nwb"], Coordinates{Row: sh.CurrentRow(), Column: 4})
+	customerSmy.cellMap["er"] = append(customerSmy.cellMap["er"], Coordinates{Row: sh.CurrentRow(), Column: 5})
+	customerSmy.cellMap["abgrEL"] = append(customerSmy.cellMap["abgrEL"], Coordinates{Row: sh.CurrentRow(), Column: 8})
+	customerSmy.cellMap["abgrFK"] = append(customerSmy.cellMap["abgrFK"], Coordinates{Row: sh.CurrentRow(), Column: 9})
+	customerSmy.cellMap["db1"] = append(customerSmy.cellMap["db1"], Coordinates{Row: sh.CurrentRow(), Column: 10})
 	sh.AddEmptyRow()
 
 	customerSmy.ar += p.revenue
