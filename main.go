@@ -232,6 +232,7 @@ func main() {
 		}
 		destExcel.FirstSheet().Add(&p)
 	}
+	destExcel.FirstSheet().Add(&customerSmy)
 	destExcel.FirstSheet().Add(&smy)
 	destExcel.FirstSheet().FreezeHeader()
 
@@ -250,6 +251,7 @@ func main() {
 		}
 		destExcel.Sheet("PR").Add(&p)
 	}
+	destExcel.Sheet("PR").Add(&customerSmy)
 	destExcel.Sheet("PR").Add(&smy)
 	destExcel.Sheet("PR").FreezeHeader()
 
@@ -487,15 +489,17 @@ func (p *Project) Insert(sh *excel.Sheet) {
 		Coordinates{Row: sh.NextRow(), Column: 9},
 	}}
 	projectResultCells := map[int]Cell{
-		2:  Cell{Value: p.revenue, Style: tbeStyle},
-		3:  Cell{Value: p.externalCostsChargeable, Style: tbeStyle},
-		4:  Cell{Value: p.externalCosts, Style: tbeStyle},
-		5:  Cell{Value: invoiceFormula.Add(), Style: tbeStyle},
-		6:  topBorderCell,
-		7:  topBorderCell,
-		8:  Cell{Value: adjRevFormula.Add(), Style: tbeStyle},
-		9:  Cell{Value: adjExtCostsFormula.Add(), Style: tbeStyle},
-		10: Cell{Value: db1Formula.Substract(func(coords []Coordinates) Coordinates { return coords[0] }), Style: tbeStyle},
+		2: Cell{Value: p.revenue, Style: tbeStyle},
+		3: Cell{Value: p.externalCostsChargeable, Style: tbeStyle},
+		4: Cell{Value: p.externalCosts, Style: tbeStyle},
+		5: Cell{Value: invoiceFormula.Add(), Style: tbeStyle},
+		6: topBorderCell,
+		7: topBorderCell,
+		8: Cell{Value: adjRevFormula.Add(), Style: tbeStyle},
+		9: Cell{Value: adjExtCostsFormula.Add(), Style: tbeStyle},
+		10: Cell{Value: db1Formula.Raw(func(coords []Coordinates) string {
+			return fmt.Sprintf("=%s-%s+%s+%s", coords[0].ToString(), coords[1].ToString(), coords[2].ToString(), coords[3].ToString())
+		}), Style: tbeStyle},
 	}
 	sh.AddRow(projectResultCells)
 	if customerSmy.cellMap == nil {
